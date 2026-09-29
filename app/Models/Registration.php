@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['event_id', 'code', 'token', 'name', 'regency_id', 'email', 'email_canonical', 'phone', 'ticket_qty', 'redeemed_at', 'redeemed_by', 'ip_address'])]
+#[Fillable(['event_id', 'code', 'token', 'name', 'regency_id', 'email', 'email_canonical', 'phone', 'ticket_qty', 'redeemed_at', 'redeemed_by', 'cancelled_at', 'cancelled_by', 'ip_address'])]
 class Registration extends Model
 {
     /**
@@ -20,6 +20,7 @@ class Registration extends Model
         return [
             'ticket_qty' => 'integer',
             'redeemed_at' => 'datetime',
+            'cancelled_at' => 'datetime',
         ];
     }
 
@@ -47,6 +48,16 @@ class Registration extends Model
     public function redeemer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'redeemed_by');
+    }
+
+    /**
+     * Admin yang membatalkan registrasi ini.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function canceller(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
     }
 
     /**

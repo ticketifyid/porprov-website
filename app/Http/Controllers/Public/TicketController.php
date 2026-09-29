@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers\Public;
 
+use App\Actions\ResendTicketNotifications;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\SearchTicketRequest;
-use App\Jobs\SendTicketNotification;
-use App\Models\NotificationLog;
 use App\Models\Registration;
 use Carbon\CarbonInterface;
 use chillerlan\QRCode\QRCode;
@@ -17,13 +16,6 @@ use Illuminate\Support\Facades\RateLimiter;
 
 class TicketController extends Controller
 {
-    /**
-     * Kanal notifikasi yang di-dispatch ulang lewat /cari-tiket.
-     *
-     * @var list<string>
-     */
-    private const CHANNELS = ['email', 'whatsapp'];
-
     /**
      * Maksimal resend per kontak (bukan per IP): 3 kali per jam. Peserta di
      * balik CGNAT berbagi IP, jadi throttle utama HARUS per-kontak, bukan
@@ -40,6 +32,8 @@ class TicketController extends Controller
      */
     public function show(Registration $registration): Response
     {
+        abort_if($registration->cancelled_at !== null, 404);
+
         $registration->loadMissing(['event', 'regency']);
 
         $event = $registration->event;
@@ -74,7 +68,7 @@ class TicketController extends Controller
      * mencegah spam resend ke satu peserta tanpa membocorkan lewat respons
      * yang berbeda kalau limitnya kena.
      */
-    public function search(SearchTicketRequest $request): View
+    public function search(SearchTicketRequest $request, ResendTicketNotifications $resend): View
     {
         $throttleKey = 'cari-tiket:'.$request->canonicalContact();
 
@@ -82,7 +76,7 @@ class TicketController extends Controller
             RateLimiter::hit($throttleKey, self::DECAY_SECONDS_PER_CONTACT);
 
             foreach ($this->matchingRegistrations($request) as $registration) {
-                $this->resendNotifications($registration);
+                $resend->handle($registration);
             }
         }
 
@@ -90,30 +84,18 @@ class TicketController extends Controller
     }
 
     /**
+     * Registrasi yang dibatalkan diperlakukan seolah tidak terdaftar
+     * (cancelled_at mengosongkan email_canonical, dan HP tetap difilter di
+     * sini), supaya pesan tetap netral (aturan 11 CLAUDE.md).
+     *
      * @return Collection<int, Registration>
      */
     private function matchingRegistrations(SearchTicketRequest $request): Collection
     {
         return Registration::query()
+            ->whereNull('cancelled_at')
             ->where($request->isEmailContact() ? 'email_canonical' : 'phone', $request->canonicalContact())
             ->get();
-    }
-
-    /**
-     * Reset notification_logs registrasi ini ke pending lalu dispatch ulang.
-     * Job Fase 5 sengaja idempoten (skip kalau log sudah 'sent'), jadi tanpa
-     * reset ini dispatch ulang tidak akan mengirim apa pun.
-     */
-    private function resendNotifications(Registration $registration): void
-    {
-        foreach (self::CHANNELS as $channel) {
-            NotificationLog::query()->updateOrCreate(
-                ['registration_id' => $registration->getKey(), 'channel' => $channel],
-                ['status' => 'pending', 'attempts' => 0, 'last_error' => null],
-            );
-
-            SendTicketNotification::dispatch($registration->getKey(), $channel);
-        }
     }
 
     private function qrSvg(string $token): string

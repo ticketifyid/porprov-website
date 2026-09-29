@@ -70,6 +70,12 @@ class ScanController extends Controller
         }
 
         // Kamera, langkah pertama: tidak mengubah status apa pun.
+        if ($registration->cancelled_at !== null) {
+            $action->logCancelled($registration, $officer, 'camera', $data['value'], $request->ip());
+
+            return $this->resultResponse($registration, ScanResult::Cancelled, $officer);
+        }
+
         if ($registration->redeemed_at !== null) {
             $action->logAlreadyRedeemed($registration, $officer, 'camera', $data['value'], $request->ip());
 
@@ -208,6 +214,7 @@ class ScanController extends Controller
             'regency' => $registration->regency?->name,
             'ticket_qty' => $registration->ticket_qty,
             'is_redeemed' => $registration->redeemed_at !== null,
+            'is_cancelled' => $registration->cancelled_at !== null,
             'redeemed_at_label' => $registration->redeemed_at?->locale('id')->translatedFormat('H.i'),
             'redeemed_by_name' => $registration->redeemer?->name,
         ];

@@ -99,6 +99,13 @@
         } else if (kind === 'not_found') {
             beep([{ hz: 180, ms: 420, at: 0 }]);
             vibrate([420]);
+        } else if (kind === 'cancelled') {
+            beep([
+                { hz: 260, ms: 220, at: 0 },
+                { hz: 180, ms: 220, at: 260 },
+                { hz: 120, ms: 320, at: 520 },
+            ]);
+            vibrate([150, 90, 150, 90, 300]);
         } else if (kind === 'error') {
             beep([
                 { hz: 520, ms: 90, at: 0 },
@@ -253,6 +260,18 @@
         feedback('already_redeemed');
     }
 
+    function showCancelled(registration) {
+        state.pending = null;
+        renderPanel(
+            'cancelled',
+            '<p class="scan-result__headline">Tiket dibatalkan</p>' +
+            '<p class="scan-result__detail">Arahkan peserta ke meja bantuan.</p>' +
+            identityBlock(registration) +
+            nextButton()
+        );
+        feedback('cancelled');
+    }
+
     function showPendingConfirm(registration, method) {
         state.pending = { id: registration.id, method: method, value: registration.value || null };
 
@@ -288,6 +307,8 @@
             showSuccess(data.registration);
         } else if (data.result === 'already_redeemed') {
             showAlreadyRedeemed(data.registration, data.recent_self === true);
+        } else if (data.result === 'cancelled') {
+            showCancelled(data.registration);
         } else if (data.result === 'pending_confirm') {
             var registration = data.registration;
             registration.value = scannedValue;
@@ -327,9 +348,11 @@
                 var meta = escapeHtml(candidate.code) +
                     ' · ' + escapeHtml(candidate.ticket_qty) + ' gelang' +
                     (candidate.regency ? ' · ' + escapeHtml(candidate.regency) : '') +
-                    (candidate.is_redeemed
-                        ? ' · sudah ditukar ' + escapeHtml(candidate.redeemed_at_label)
-                        : '');
+                    (candidate.is_cancelled
+                        ? ' · dibatalkan'
+                        : candidate.is_redeemed
+                            ? ' · sudah ditukar ' + escapeHtml(candidate.redeemed_at_label)
+                            : '');
 
                 return '<li class="scan-candidate">' +
                     '<span>' +
@@ -342,6 +365,7 @@
                     ' data-scan-name="' + escapeHtml(candidate.name) + '"' +
                     ' data-scan-code="' + escapeHtml(candidate.code) + '"' +
                     ' data-scan-regency="' + escapeHtml(candidate.regency || '') + '"' +
+                    ' data-scan-cancelled="' + (candidate.is_cancelled ? '1' : '0') + '"' +
                     ' data-scan-keyword="' + escapeHtml(keyword) + '">Pilih</button>' +
                     '</li>';
             })
@@ -384,17 +408,24 @@
         el.candidates.innerHTML = '';
         el.manualNote.textContent = '';
 
-        showPendingConfirm(
-            {
-                id: button.getAttribute('data-scan-pick'),
-                name: button.getAttribute('data-scan-name'),
-                code: button.getAttribute('data-scan-code'),
-                regency: button.getAttribute('data-scan-regency'),
-                ticket_qty: button.getAttribute('data-scan-qty'),
-                value: button.getAttribute('data-scan-keyword'),
-            },
-            'manual'
-        );
+        var candidate = {
+            id: button.getAttribute('data-scan-pick'),
+            name: button.getAttribute('data-scan-name'),
+            code: button.getAttribute('data-scan-code'),
+            regency: button.getAttribute('data-scan-regency'),
+            ticket_qty: button.getAttribute('data-scan-qty'),
+            value: button.getAttribute('data-scan-keyword'),
+        };
+
+        if (button.getAttribute('data-scan-cancelled') === '1') {
+            // Tiket dibatalkan: langsung tampilkan panel batal, tanpa tombol
+            // konfirmasi — tetap lewat /redeem supaya scan_logs tercatat.
+            state.pending = { id: candidate.id, method: 'manual', value: candidate.value };
+            confirmRedeem();
+            return;
+        }
+
+        showPendingConfirm(candidate, 'manual');
     }
 
     // ---------- mode ----------

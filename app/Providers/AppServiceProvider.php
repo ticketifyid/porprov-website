@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Contracts\TicketNotifier;
 use App\Services\Notifications\LogTicketNotifier;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 
@@ -43,5 +44,11 @@ class AppServiceProvider extends ServiceProvider
             'versionedAsset',
             fn (string $expression): string => "<?php echo e(\App\Support\AssetVersion::url({$expression})); ?>",
         );
+
+        // Cegah migrate:fresh/db:wipe/migrate:rollback dkk berjalan tanpa
+        // sengaja di produksi (docs/struktur.md Fase 8 — insiden migrate:fresh
+        // yang salah sasaran terhadap DB lokal). Command-command itu akan
+        // menolak jalan dan melempar exception kecuali dipaksa dengan --force.
+        DB::prohibitDestructiveCommands($this->app->isProduction());
     }
 }

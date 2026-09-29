@@ -53,9 +53,10 @@ class SendTicketNotification implements ShouldQueue
 
         $registration = Registration::query()->find($this->registrationId);
 
-        // Registrasi bisa sudah dibatalkan/dihapus admin sebelum worker jalan.
-        // Itu bukan kegagalan pengiriman; jangan bikin job failed.
-        if ($registration === null) {
+        // Registrasi bisa sudah dihapus, atau dibatalkan admin sebelum worker
+        // jalan. Itu bukan kegagalan pengiriman; jangan bikin job failed, dan
+        // jangan sentuh notification_logs (biar tetap pending, bukan sent).
+        if ($registration === null || $registration->cancelled_at !== null) {
             return;
         }
 

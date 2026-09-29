@@ -286,6 +286,19 @@ class NotificationJobTest extends TestCase
         $this->assertSame([], $this->notifier->calls);
     }
 
+    public function test_registrasi_yang_sudah_dibatalkan_tidak_dikirim_dan_log_tetap_pending(): void
+    {
+        $log = $this->log();
+        $this->registration->update(['cancelled_at' => now(), 'email_canonical' => null]);
+
+        $this->runJob();
+
+        $log->refresh();
+        $this->assertSame([], $this->notifier->calls);
+        $this->assertSame('pending', $log->status);
+        $this->assertNull($log->sent_at);
+    }
+
     public function test_job_tetap_jalan_meski_baris_log_belum_ada(): void
     {
         $this->runJob();

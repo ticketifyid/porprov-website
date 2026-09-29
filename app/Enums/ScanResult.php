@@ -11,4 +11,5 @@ enum ScanResult: string
     case Success = 'success';
     case AlreadyRedeemed = 'already_redeemed';
     case NotFound = 'not_found';
+    case Cancelled = 'cancelled';
 }

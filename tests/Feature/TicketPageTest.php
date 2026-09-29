@@ -65,6 +65,13 @@ class TicketPageTest extends TestCase
         $this->get('/tiket/tidak-ada')->assertNotFound();
     }
 
+    public function test_registrasi_yang_dibatalkan_menghasilkan_404(): void
+    {
+        $registration = $this->makeRegistration(['cancelled_at' => now()]);
+
+        $this->get('/tiket/'.$registration->token)->assertNotFound();
+    }
+
     public function test_halaman_tiket_memuat_kode_qr_dan_data_tersamar_bukan_data_utuh(): void
     {
         $registration = $this->makeRegistration();
@@ -222,6 +229,17 @@ class TicketPageTest extends TestCase
         $this->post('/cari-tiket', ['contact' => 'lain@gmail.com'])->assertOk()->assertSee(self::NEUTRAL);
 
         Queue::assertPushed(SendTicketNotification::class, 8);
+    }
+
+    public function test_registrasi_yang_dibatalkan_diperlakukan_seolah_tidak_terdaftar(): void
+    {
+        Queue::fake();
+        $this->makeRegistration(['cancelled_at' => now(), 'email_canonical' => null]);
+
+        $this->post('/cari-tiket', ['contact' => 'budisantoso@gmail.com'])
+            ->assertOk()->assertSee(self::NEUTRAL);
+
+        Queue::assertNotPushed(SendTicketNotification::class);
     }
 
     public function test_throttle_per_ip_20_per_menit_baru_menghasilkan_429(): void

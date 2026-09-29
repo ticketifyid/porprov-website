@@ -23,8 +23,8 @@ class RedeemRegistration
     /**
      * Tukarkan gelang lewat update bersyarat. Affected rows 0 berarti baris
      * ini sudah ditukar lebih dulu (oleh petugas lain, atau oleh kiriman ganda
-     * dari alat scanner yang sama) — diperlakukan already_redeemed, tidak
-     * pernah menimpa redeemed_at yang sudah ada.
+     * dari alat scanner yang sama) atau sudah dibatalkan admin — diperlakukan
+     * already_redeemed/cancelled, tidak pernah menimpa redeemed_at yang sudah ada.
      */
     public function handle(
         Registration $registration,
@@ -37,12 +37,19 @@ class RedeemRegistration
             $affected = Registration::query()
                 ->whereKey($registration->getKey())
                 ->whereNull('redeemed_at')
+                ->whereNull('cancelled_at')
                 ->update([
                     'redeemed_at' => now(),
                     'redeemed_by' => $officer->getKey(),
                 ]);
 
-            $result = $affected === 1 ? ScanResult::Success : ScanResult::AlreadyRedeemed;
+            if ($affected === 1) {
+                $result = ScanResult::Success;
+            } else {
+                $result = $registration->fresh()->cancelled_at !== null
+                    ? ScanResult::Cancelled
+                    : ScanResult::AlreadyRedeemed;
+            }
 
             $this->log($registration, $officer, $method, $result, $scannedValue, $ip);
 
@@ -70,6 +77,20 @@ class RedeemRegistration
         ?string $ip = null,
     ): ScanLog {
         return $this->log($registration, $officer, $method, ScanResult::AlreadyRedeemed, $scannedValue, $ip);
+    }
+
+    /**
+     * Langkah pertama kamera atas tiket yang sudah dibatalkan admin: tidak ada
+     * yang perlu diupdate, tapi percobaannya tetap tercatat.
+     */
+    public function logCancelled(
+        Registration $registration,
+        User $officer,
+        string $method,
+        string $scannedValue,
+        ?string $ip = null,
+    ): ScanLog {
+        return $this->log($registration, $officer, $method, ScanResult::Cancelled, $scannedValue, $ip);
     }
 
     private function log(

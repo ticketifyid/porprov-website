@@ -12,6 +12,7 @@
     --scan-danger-bg: #B4201C;
     --scan-neutral-bg: #4A5568;
     --scan-info-bg: #1B4F9C;
+    --scan-cancelled-bg: #6B21A8;
     --scan-on-panel: #FFFFFF;
 }
 
@@ -151,6 +152,10 @@ body.scanner-body {
 
 .scan-result--info {
     background: var(--scan-info-bg);
+}
+
+.scan-result--cancelled {
+    background: var(--scan-cancelled-bg);
 }
 
 .scan-result__headline {

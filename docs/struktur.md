@@ -91,11 +91,31 @@ Catatan penting:
 - **Proxy dipercaya HANYA di `APP_ENV=local`** (`bootstrap/app.php`): `if (env('APP_ENV') === 'local') { $middleware->trustProxies(at: '*'); }`. Dibutuhkan untuk menguji kamera dari HP lewat Cloudflare Tunnel — tunnel menerima HTTPS di sisi luar lalu meneruskan `http://` + `X-Forwarded-Proto`, jadi tanpa ini URL aset tetap `http://` dan browser menolak membuka kamera. **Tidak boleh aktif di environment lain**: mempercayai semua proxy berarti `X-Forwarded-For` apa pun dipercaya, sehingga throttle per IP (`POST /daftar`, `POST /cari-tiket`) bisa ditembus dengan memalsukan header. Kondisinya memakai `env()` dan bukan `app()->environment()` karena callback `withMiddleware` berjalan saat kernel HTTP di-resolve, sebelum konfigurasi dimuat; efek sampingnya aman — di server yang memakai `config:cache`, `.env` tidak dimuat sehingga nilainya null dan proxy tetap tidak dipercaya. Dijaga `tests/Feature/TrustedProxyTest.php` (baru, tidak ada di daftar `tests/` awal): di `APP_ENV=testing`, header `X-Forwarded-Proto`/`For`/`Host` harus diabaikan.
 - `tests/Feature/ScanTest.php` menutup: kamera tidak mengubah status, konfirmasi kamera, hardware langsung redeem, redeem kedua (`redeemed_at` tidak berubah), `recent_self` (petugas sama < 2 menit vs petugas lain / > 2 menit), `not_found`, normalisasi kode manual, pencarian nama/HP multi-kandidat, nama < 3 karakter, petugas nonaktif, guest, dan admin.
 
+### Penyimpangan disetujui pada Fase 8
+
+- **`registrations.cancelled_at` + `cancelled_by`** (kolom baru, tidak ada di `docs/erd.md` sebelum Fase 8): `docs/erd.md` tidak menyediakan representasi "registrasi dibatalkan" sama sekali, padahal `docs/prompts.md` Fase 8 mewajibkan fitur pembatalan. Diputuskan bersama pemilik proyek: tambah kolom lewat migration baru (`..._add_cancellation_to_registrations_table.php`), bukan hard delete — supaya riwayat pembatalan tetap ada untuk audit/laporan. `docs/erd.md` sudah diperbarui mengikuti keputusan ini.
+- **`email_canonical` diubah jadi nullable** di migration yang sama: dikosongkan oleh `CancelRegistration` saat membatalkan, supaya peserta yang dibatalkan bisa mendaftar ulang dengan email yang sama (`unique(['event_id','email_canonical'])` mengizinkan banyak `NULL`). `column->change()` dipakai tanpa `doctrine/dbal` (Laravel 13 sudah native).
+- **`App\Actions\CancelRegistration`** (baru, mengikuti pola `RegisterAttendee`/`RedeemRegistration`): update bersyarat `WHERE id=? AND redeemed_at IS NULL AND cancelled_at IS NULL` di dalam transaksi dengan `Event::lockForUpdate()`; `tickets_taken` didecrement hanya jika affected rows = 1. Affected rows 0 → `App\Exceptions\RegistrationCannotBeCancelledException` dengan pesan yang membedakan "sudah ditukar" vs "sudah dibatalkan sebelumnya" (dibaca dari `fresh()` setelah update gagal).
+- **`App\Actions\ResendTicketNotifications`** (baru): logika reset `notification_logs` ke `pending` + dispatch `SendTicketNotification` yang sebelumnya method privat di `TicketController` (Fase 6) diekstrak ke Action supaya dipakai bersama oleh `/cari-tiket` dan tombol kirim ulang admin — logikanya identik, tidak diduplikasi.
+- **`App\Enums\ScanResult` menambah `Cancelled = 'cancelled'`**, cermin nilai baru enum `scan_logs.result`. `RedeemRegistration::handle()` menambah `whereNull('cancelled_at')` ke update bersyarat; kalau affected rows 0, dibedakan already_redeemed vs cancelled lewat `fresh()->cancelled_at`. Method baru `logCancelled()` (pola sama `logAlreadyRedeemed()`) untuk langkah pertama kamera. Ketiga jalur scan (hardware langsung, kamera langkah-pertama, konfirmasi manual) menampilkan panel ungu "TIKET DIBATALKAN, arahkan ke meja bantuan" dengan bunyi/getar sendiri (`scan-result--cancelled`, token `--scan-cancelled-bg` di `scanner.css`); di kamera dan pencarian manual, status batal langsung tampil tanpa tombol Konfirmasi — pencarian manual tetap lewat endpoint `/redeem` yang sama (dipicu otomatis dari `pickCandidate()`) supaya `scan_logs` tetap tercatat.
+- **`SendTicketNotification` melewati registrasi yang sudah dibatalkan** (`cancelled_at !== null`): tidak mengirim apa pun dan tidak mengubah `notification_logs` (tetap `pending`), sama seperti perlakuan registrasi yang sudah dihapus.
+- **`TicketController`**: `show()` (`/tiket/{token}`) membalas 404 untuk registrasi yang dibatalkan; `search()` (`/cari-tiket`) menambah `whereNull('cancelled_at')` supaya registrasi yang dibatalkan diperlakukan seolah tidak terdaftar (pesan tetap netral, aturan 11).
+- **Admin self-protection** (`UserController::update`, aturan tambahan pemilik proyek): admin tidak bisa menonaktifkan atau menurunkan role akunnya sendiri (dicek lebih dulu, pesan spesifik); dan setiap update yang akan menyisakan nol admin aktif (`role=admin AND is_active=true`) ditolak, dicek lewat `exists()` query biasa (bukan lock — bukan operasi kuota/uang, dan frekuensinya rendah). Form `admin/users/edit.blade.php` menambah `<input type="hidden">` untuk `role`/`is_active` saat mengedit akun sendiri, supaya elemen `disabled` (yang tidak ikut ter-submit browser) tidak membuat request kehilangan nilai — validasi server tetap otoritas sebenarnya.
+- **`Admin\EventController::update`** mengunci baris event (`lockForUpdate()`) di dalam transaksi untuk menolak `quota < tickets_taken` (aturan tambahan pemilik proyek), bukan di `UpdateEventRequest` — FormRequest tidak punya akses mudah ke baris event tanpa duplikasi query, dan aturan 1 CLAUDE.md sudah menetapkan pola "kuota berubah di dalam transaksi dengan lock" untuk kasus serupa.
+- **`Admin\ExportController`**: CSV streaming (`response()->streamDownload` + `Registration::cursor()`, tidak memuat semua baris ke memori), diawali BOM UTF-8, kolom persis `docs/arsitektur.md` ("Cadangan hari H": kode, nama, HP, jumlah tiket), hanya registrasi yang belum dibatalkan, diurutkan nama. Setiap sel yang diawali `=`, `+`, `-`, `@`, tab, atau carriage return diberi prefix `'` (mencegah CSV injection saat dibuka di Excel/Sheets).
+- **`tests/Feature/Admin/UserManagementTest.php` dan `tests/Feature/Admin/ExportTest.php`** (tidak tercantum di daftar `tests/` Fase 2 — hanya `EventSettingsTest.php` dan `RegistrationAdminTest.php` yang disebut eksplisit): ekstensi wajar mengikuti pola test Admin yang sudah ada, menguji dua aturan tambahan pemilik proyek (self-protection akun, format export) yang tidak tercakup dua file test yang sudah direncanakan.
+- Penambahan kecil di test yang sudah ada (bukan file baru): `ScanTest.php` (tiket dibatalkan di ketiga jalur scan), `TicketPageTest.php` (404 tiket dibatalkan, `/cari-tiket` memperlakukannya seolah tidak terdaftar), `RegistrationTest.php` (daftar ulang dengan email sama setelah dibatalkan), `NotificationJobTest.php` (job melewati registrasi yang dibatalkan).
+- **`DB::prohibitDestructiveCommands($this->app->isProduction())`** ditambahkan di `AppServiceProvider::boot()` (bukan bagian dari daftar `tests/` Fase 2 mana pun): melarang `migrate:fresh`, `migrate:refresh`, `migrate:reset`, `migrate:rollback`, dan `db:wipe` berjalan di `APP_ENV=production`, dari insiden `migrate:fresh --env=testing` yang salah sasaran menimpa DB lokal MySQL (bukan SQLite in-memory) karena proyek ini tidak punya `.env.testing`. `tests/Feature/DestructiveCommandsTest.php` (baru, tidak ada di daftar `tests/` awal) membuktikan `migrate:fresh` ditolak (exit code 1, tidak menyentuh DB) saat environment di-set ke `production`, dan tetap berjalan normal di `local`/`testing`.
+
+
+
 ```
 app/
   Actions/
     RegisterAttendee.php              # transaksi kuota: lockForUpdate, hitung sisa, increment, create registration
-    RedeemRegistration.php            # update bersyarat WHERE id=? AND redeemed_at IS NULL, catat scan_logs
+    RedeemRegistration.php            # update bersyarat WHERE id=? AND redeemed_at IS NULL AND cancelled_at IS NULL, catat scan_logs
+    CancelRegistration.php            # update bersyarat + decrement tickets_taken, ditambahkan Fase 8
+    ResendTicketNotifications.php     # reset notification_logs + dispatch, ditambahkan Fase 8 (dipakai /cari-tiket dan admin)
   Support/
     PhoneNormalizer.php               # aturan 5 CLAUDE.md
     RegistrationCodeGenerator.php     # aturan 6 CLAUDE.md
@@ -103,7 +123,7 @@ app/
     AssetVersion.php                  # cache busting ?v=filemtime, ditambahkan Fase 4 (lihat catatan)
   Enums/
     UserRole.php                      # admin / scanner, ditambahkan Fase 2 (lihat catatan di atas)
-    ScanResult.php                    # success / already_redeemed / not_found, ditambahkan Fase 7
+    ScanResult.php                    # success / already_redeemed / not_found / cancelled, ditambahkan Fase 7 (cancelled di Fase 8)
   Contracts/
     TicketNotifier.php
   Services/
@@ -137,6 +157,7 @@ app/
       EnsureRole.php                  # admin / scanner
   Exceptions/
     QuotaException.php
+    RegistrationCannotBeCancelledException.php  # ditambahkan Fase 8
   Jobs/
     SendTicketNotification.php        # (registrationId, channel), panggil TicketNotifier
   Models/
@@ -155,6 +176,8 @@ database/
     ..._create_notification_logs_table.php
     ..._create_users_table.php           # migration bawaan DIEDIT langsung: username, role, is_active, tanpa email; password_reset_tokens DIHAPUS dari sini
     ..._create_scan_logs_table.php
+    ..._add_cancellation_to_registrations_table.php  # cancelled_at, cancelled_by, email_canonical->nullable, ditambahkan Fase 8
+    ..._add_cancelled_to_scan_logs_result_enum.php   # ditambahkan Fase 8
   seeders/
     EventSeeder.php
     RegencySeeder.php
@@ -181,8 +204,14 @@ resources/
     admin/
       dashboard.blade.php
       events/
+        edit.blade.php
       registrations/
+        index.blade.php
+        show.blade.php
       users/
+        index.blade.php
+        create.blade.php
+        edit.blade.php
 
 public/
   css/
@@ -213,6 +242,7 @@ tests/
     AccessControlTest.php               # gating role admin/scanner per rute — ditambahkan Fase 2
     AssetVersionTest.php                # cache busting ?v=filemtime — ditambahkan Fase 4
     TrustedProxyTest.php                # X-Forwarded-* hanya dipercaya di local — ditambahkan Fase 7
+    DestructiveCommandsTest.php         # migrate:fresh dkk ditolak di production — ditambahkan Fase 8
     RegistrationTest.php                # kuota, duplikat email_canonical, HP tidak unik, format
     NotificationJobTest.php
     TicketPageTest.php
@@ -220,6 +250,8 @@ tests/
     Admin/
       EventSettingsTest.php
       RegistrationAdminTest.php
+      UserManagementTest.php          # tidak ada di daftar awal, ditambahkan Fase 8 (lihat catatan)
+      ExportTest.php                  # tidak ada di daftar awal, ditambahkan Fase 8 (lihat catatan)
 ```
 
 ## Catatan untuk Fase 7 (scanner) — SUDAH DIJAWAB

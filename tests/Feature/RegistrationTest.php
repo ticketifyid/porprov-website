@@ -263,6 +263,20 @@ class RegistrationTest extends TestCase
         $this->assertSame(2, $this->event->fresh()->tickets_taken);
     }
 
+    public function test_daftar_ulang_dengan_email_sama_diterima_setelah_registrasi_pertama_dibatalkan(): void
+    {
+        $this->post('/daftar', $this->payload())->assertRedirectContains('/daftar/sukses/');
+
+        $pertama = Registration::firstOrFail();
+        app(\App\Actions\CancelRegistration::class)->handle($pertama, \App\Models\User::factory()->admin()->create());
+
+        $response = $this->post('/daftar', $this->payload(['name' => 'Budi Santoso Lagi']));
+
+        $response->assertRedirectContains('/daftar/sukses/');
+        $this->assertSame(2, Registration::count());
+        $this->assertSame(2, $this->event->fresh()->tickets_taken);
+    }
+
     public function test_nomor_hp_sama_dengan_email_berbeda_diterima(): void
     {
         $this->post('/daftar', $this->payload())->assertRedirectContains('/daftar/sukses/');

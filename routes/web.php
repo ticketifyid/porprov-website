@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\EventController;
+use App\Http\Controllers\Admin\ExportController;
+use App\Http\Controllers\Admin\RegistrationAdminController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\RegistrationController;
@@ -41,6 +45,22 @@ Route::post('/logout', [LoginController::class, 'logout'])
 Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/', DashboardController::class)->name('dashboard');
+
+        Route::get('/events', [EventController::class, 'edit'])->name('events.edit');
+        Route::put('/events', [EventController::class, 'update'])->name('events.update');
+
+        Route::get('/registrations', [RegistrationAdminController::class, 'index'])->name('registrations.index');
+        Route::get('/registrations/{registration}', [RegistrationAdminController::class, 'show'])->name('registrations.show');
+        Route::post('/registrations/{registration}/cancel', [RegistrationAdminController::class, 'cancel'])->name('registrations.cancel');
+        Route::post('/registrations/{registration}/resend', [RegistrationAdminController::class, 'resend'])->name('registrations.resend');
+
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+        Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+
+        Route::get('/export', ExportController::class)->name('export');
     });
 
     Route::middleware('role:scanner')->group(function () {

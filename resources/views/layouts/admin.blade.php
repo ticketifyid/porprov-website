@@ -168,6 +168,38 @@
                                             <span class="menu-title">Dashboard</span>
                                         </a>
                                     </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ request()->routeIs('admin.events.*') ? 'active' : '' }}" href="{{ route('admin.events.edit') }}">
+                                            <span class="menu-icon">
+                                                <i class="ki-duotone ki-calendar fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span></i>
+                                            </span>
+                                            <span class="menu-title">Pengaturan Event</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ request()->routeIs('admin.registrations.*') ? 'active' : '' }}" href="{{ route('admin.registrations.index') }}">
+                                            <span class="menu-icon">
+                                                <i class="ki-duotone ki-people fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
+                                            </span>
+                                            <span class="menu-title">Peserta</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
+                                            <span class="menu-icon">
+                                                <i class="ki-duotone ki-profile-user fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span></i>
+                                            </span>
+                                            <span class="menu-title">Akun Petugas</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link" href="{{ route('admin.export') }}">
+                                            <span class="menu-icon">
+                                                <i class="ki-duotone ki-file-down fs-2"><span class="path1"></span><span class="path2"></span></i>
+                                            </span>
+                                            <span class="menu-title">Export CSV</span>
+                                        </a>
+                                    </div>
                                 @endif
 
                                 <div class="menu-item">

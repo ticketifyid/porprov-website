@@ -215,6 +215,65 @@ class ScanTest extends TestCase
             ->assertJsonPath('registration.redeemed_by_name', 'Pos 2 - Rini');
     }
 
+    // ---------- tiket dibatalkan ----------
+
+    public function test_hardware_pada_tiket_dibatalkan_menghasilkan_cancelled_dan_tidak_menukar(): void
+    {
+        $registration = $this->makeRegistration(['cancelled_at' => now()]);
+
+        $this->actingAs($this->officer)
+            ->postJson('/scan', ['value' => $registration->token, 'method' => 'hardware'])
+            ->assertOk()
+            ->assertJsonPath('result', 'cancelled');
+
+        $registration->refresh();
+        $this->assertNull($registration->redeemed_at);
+
+        $log = ScanLog::sole();
+        $this->assertSame('cancelled', $log->result);
+        $this->assertSame('hardware', $log->method);
+        $this->assertSame($registration->id, $log->registration_id);
+    }
+
+    public function test_kamera_langkah_pertama_pada_tiket_dibatalkan_langsung_cancelled_tanpa_pending_confirm(): void
+    {
+        $registration = $this->makeRegistration(['cancelled_at' => now()]);
+
+        $this->actingAs($this->officer)
+            ->postJson('/scan', ['value' => $registration->token, 'method' => 'camera'])
+            ->assertOk()
+            ->assertJsonPath('result', 'cancelled');
+
+        $log = ScanLog::sole();
+        $this->assertSame('cancelled', $log->result);
+        $this->assertSame('camera', $log->method);
+    }
+
+    public function test_pencarian_manual_pada_tiket_dibatalkan_ditandai_is_cancelled_pada_kandidat(): void
+    {
+        $registration = $this->makeRegistration(['cancelled_at' => now()]);
+
+        $this->actingAs($this->officer)
+            ->postJson('/scan/cari', ['query' => $registration->code])
+            ->assertOk()
+            ->assertJsonPath('candidates.0.is_cancelled', true);
+    }
+
+    public function test_konfirmasi_manual_pada_tiket_dibatalkan_menghasilkan_cancelled(): void
+    {
+        $registration = $this->makeRegistration(['cancelled_at' => now()]);
+
+        $this->actingAs($this->officer)
+            ->postJson("/scan/{$registration->id}/redeem", ['method' => 'manual', 'value' => $registration->code])
+            ->assertOk()
+            ->assertJsonPath('result', 'cancelled');
+
+        $log = ScanLog::sole();
+        $this->assertSame('cancelled', $log->result);
+        $this->assertSame('manual', $log->method);
+        $this->assertNull($registration->fresh()->redeemed_at);
+    }
+
     // ---------- QR tidak dikenal ----------
 
     public function test_token_tidak_dikenal_dicatat_not_found_tanpa_registration_id(): void

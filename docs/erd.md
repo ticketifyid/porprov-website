@@ -53,15 +53,17 @@ Seeder: 35 kabupaten/kota Jawa Tengah + "Luar Jawa Tengah" (sort_order terbesar)
 | name | `string('name', 150)` | |
 | regency_id | `unsignedSmallInteger('regency_id')` + FK ke `regencies.id` | |
 | email | `string('email', 191)` | lowercase, persis seperti diketik peserta; dipakai untuk kirim e-ticket |
-| email_canonical | `string('email_canonical', 191)` | Bentuk kanonik untuk cek duplikat, lihat `docs/arsitektur.md` |
+| email_canonical | `string('email_canonical', 191)->nullable()` | Bentuk kanonik untuk cek duplikat, lihat `docs/arsitektur.md`. Dikosongkan (`NULL`) saat registrasi dibatalkan (Fase 8), supaya email yang sama bisa dipakai mendaftar ulang — unique index mengizinkan banyak `NULL` |
 | phone | `string('phone', 20)` | `62xxx` |
 | ticket_qty | `unsignedTinyInteger('ticket_qty')` | 1–4 |
 | redeemed_at | `dateTime('redeemed_at')->nullable()->index()` | |
 | redeemed_by | `foreignId('redeemed_by')->nullable()->constrained('users')->nullOnDelete()` | |
+| cancelled_at | `dateTime('cancelled_at')->nullable()->index()` | Ditambahkan Fase 8 (`App\Actions\CancelRegistration`); registrasi yang sudah `redeemed_at` tidak boleh dibatalkan |
+| cancelled_by | `foreignId('cancelled_by')->nullable()->constrained('users')->nullOnDelete()` | Ditambahkan Fase 8; admin yang membatalkan |
 | ip_address | `string('ip_address', 45)->nullable()` | |
 | timestamps | `timestamps()` | |
 
-Index: `unique(['event_id','email_canonical'])`, index biasa `phone` (bukan unique — 1 nomor HP boleh dipakai lebih dari satu pendaftaran), index `name` untuk pencarian manual.
+Index: `unique(['event_id','email_canonical'])` (mengizinkan banyak `NULL`), index biasa `phone` (bukan unique — 1 nomor HP boleh dipakai lebih dari satu pendaftaran), index `name` untuk pencarian manual.
 
 ## notification_logs
 
@@ -103,6 +105,6 @@ Kolom `email` bawaan Laravel dihapus dari migration users.
 | user_id | `foreignId('user_id')->constrained()` | |
 | scanned_value | `string('scanned_value', 255)` | Isi QR/input mentah |
 | method | `enum('method', ['camera','hardware','manual'])` | |
-| result | `enum('result', ['success','already_redeemed','not_found'])` | |
+| result | `enum('result', ['success','already_redeemed','not_found','cancelled'])` | Nilai `cancelled` ditambahkan Fase 8 (tiket yang sudah dibatalkan admin dipindai) |
 | ip_address | `string('ip_address', 45)->nullable()` | |
 | scanned_at | `dateTime('scanned_at')->index()` | Tanpa `timestamps()` |
