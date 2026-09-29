@@ -357,6 +357,6 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/email-domain.js') }}"></script>
-    <script src="{{ asset('js/stepper.js') }}"></script>
+    <script src="@versionedAsset('js/email-domain.js')"></script>
+    <script src="@versionedAsset('js/stepper.js')"></script>
 @endpush

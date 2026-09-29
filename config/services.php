@@ -28,6 +28,17 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /*
+     * Cloudflare Turnstile pada form pendaftaran publik.
+     * TURNSTILE_ENABLED=false mematikan verifikasi (dipakai di phpunit.xml dan
+     * saat pengembangan lokal tanpa kunci).
+     */
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+        'enabled' => env('TURNSTILE_ENABLED', true),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

@@ -9,8 +9,14 @@
         var domainOther = group.querySelector('[data-email-domain-other]');
         var preview = group.querySelector('[data-email-preview]');
 
+        // Domain selalu dibandingkan dan ditampilkan dalam huruf kecil,
+        // persis seperti logika artboard Form.dc.html.
+        function normalizeDomain(value) {
+            return value.trim().toLowerCase();
+        }
+
         function currentDomain() {
-            return domainSelect.value === 'lainnya' ? domainOther.value.trim() : domainSelect.value;
+            return normalizeDomain(domainSelect.value === 'lainnya' ? domainOther.value : domainSelect.value);
         }
 
         function updatePreview() {
@@ -29,7 +35,26 @@
             if (at === -1) {
                 return null;
             }
-            return { local: value.slice(0, at), domain: value.slice(at + 1) };
+            return { local: value.slice(0, at), domain: normalizeDomain(value.slice(at + 1)) };
+        }
+
+        // Kotak "Lainnya…" ikut disimpan huruf kecil; posisi kursor dijaga
+        // supaya tidak melompat ke akhir saat mengetik.
+        function forceLowercase(input) {
+            var lowered = input.value.toLowerCase();
+
+            if (lowered === input.value) {
+                return;
+            }
+
+            var start = input.selectionStart;
+            var end = input.selectionEnd;
+
+            input.value = lowered;
+
+            if (start !== null) {
+                input.setSelectionRange(start, end);
+            }
         }
 
         local.addEventListener('input', function () {
@@ -56,8 +81,17 @@
             updatePreview();
         });
 
-        domainOther.addEventListener('input', updatePreview);
+        domainOther.addEventListener('input', function () {
+            forceLowercase(domainOther);
+            updatePreview();
+        });
 
+        domainOther.addEventListener('blur', function () {
+            domainOther.value = normalizeDomain(domainOther.value);
+            updatePreview();
+        });
+
+        forceLowercase(domainOther);
         toggleCustomDomain();
         updatePreview();
     });

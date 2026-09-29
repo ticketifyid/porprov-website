@@ -30,6 +30,11 @@
   --gelang-bg: #FFF6D6;
   --gelang-ink: #3D2E00;
 
+  /* Hanya dipakai di panel navy form desktop (DesktopForm.dc.html): teks fakta
+     acara dan garis pemisah. Nilainya diambil persis dari artboard. */
+  --on-navy-strong: #E3EAF9;
+  --navy-line: #2B4B8E;
+
   --porprov-1: #179C52;
   --porprov-2: #F2B705;
   --porprov-3: #D93A2B;
@@ -55,6 +60,9 @@ body {
   color: var(--ink);
   font-size: 15px;
   line-height: 1.55;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 h1, h2, h3, p, dl, dd {
@@ -122,6 +130,14 @@ input, select, textarea {
   display: none;
 }
 
+.u-mobile-only-block {
+  display: block;
+}
+
+.u-desktop-only-block {
+  display: none;
+}
+
 @media (min-width: 992px) {
   .u-mobile-only {
     display: none;
@@ -129,6 +145,14 @@ input, select, textarea {
 
   .u-desktop-only {
     display: flex;
+  }
+
+  .u-mobile-only-block {
+    display: none;
+  }
+
+  .u-desktop-only-block {
+    display: block;
   }
 }
 
@@ -197,6 +221,17 @@ input, select, textarea {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   height: 6px;
 }
+
+/* Strip di dasar panel navy: hero desktop (10px) dan panel form (8px). */
+.strip-porprov--absolute {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.strip-porprov--hero { height: 10px; }
+.strip-porprov--panel { height: 8px; }
 
 .strip-porprov > div:nth-child(1) { background: var(--porprov-1); }
 .strip-porprov > div:nth-child(2) { background: var(--porprov-2); }
@@ -688,10 +723,30 @@ input, select, textarea {
   color: var(--navy);
 }
 
+.icon-circle--success svg {
+  width: 40px;
+  height: 40px;
+}
+
+.icon-circle--info svg {
+  width: 38px;
+  height: 38px;
+}
+
 @media (min-width: 992px) {
   .icon-circle {
     width: 84px;
     height: 84px;
+  }
+
+  .icon-circle--success svg {
+    width: 44px;
+    height: 44px;
+  }
+
+  .icon-circle--info svg {
+    width: 42px;
+    height: 42px;
   }
 }
 
@@ -1094,4 +1149,591 @@ input, select, textarea {
 .ticket-perforation--vertical .ticket-perforation__dash {
   margin: 24px 0;
   border-left: 2px dashed var(--line);
+}
+
+/* ================================================================
+   Halaman (Fase 4): Beranda, Form, Sukses, Status
+   Nilai diambil dari Main/Form/Sukses/Status dan Desktop* di
+   docs/design/artboards/.
+   ================================================================ */
+
+.page-shell {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Beranda ---------- */
+
+.home-top {
+  background: var(--surface);
+  border-radius: 0 0 28px 28px;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 992px) {
+  .home-top {
+    border-radius: 0 0 36px 36px;
+  }
+}
+
+.home-hero {
+  padding: 20px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (min-width: 992px) {
+  .home-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 64px;
+    align-items: center;
+    padding: 40px 80px 72px;
+  }
+}
+
+.home-hero__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (min-width: 992px) {
+  .home-hero__copy {
+    gap: 24px;
+  }
+}
+
+.home-hero__text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.home-hero__text .tagline-caveat {
+  margin-top: 6px;
+}
+
+@media (min-width: 992px) {
+  .home-hero__text {
+    gap: 10px;
+  }
+
+  .home-hero__text .eyebrow {
+    font-size: 17px;
+  }
+
+  .home-hero__text .tagline-caveat {
+    margin-top: 8px;
+  }
+}
+
+.home-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--ground);
+  border-radius: 16px;
+}
+
+.home-facts__item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+@media (min-width: 992px) {
+  .home-facts {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .home-facts__item {
+    height: 44px;
+    padding: 0 16px;
+    gap: 10px;
+    border-radius: 999px;
+    background: var(--ground);
+  }
+}
+
+.home-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 992px) {
+  .home-actions {
+    flex-direction: row;
+    align-items: center;
+    gap: 24px;
+    margin-top: 4px;
+  }
+
+  .home-actions .btn-primary {
+    width: auto;
+    height: 58px;
+    padding: 0 40px;
+    font-size: 18px;
+  }
+
+  .home-actions .btn-text {
+    width: auto;
+    height: auto;
+    font-size: 16px;
+  }
+}
+
+.hero-visual {
+  display: none;
+}
+
+@media (min-width: 992px) {
+  .hero-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 440px;
+    border-radius: 28px;
+    background: var(--navy);
+    position: relative;
+    overflow: hidden;
+  }
+}
+
+.hero-ticket {
+  width: 300px;
+  padding: 26px 24px;
+  background: var(--surface);
+  border-radius: 22px;
+  transform: rotate(-4deg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.hero-ticket__label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--blue);
+}
+
+.hero-ticket__code {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--navy);
+}
+
+.hero-ticket__gelang {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--gelang-bg);
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--gelang-ink);
+}
+
+.home-steps {
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.home-steps__title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--navy);
+}
+
+@media (min-width: 992px) {
+  .home-steps {
+    padding: 56px 80px 48px;
+    gap: 24px;
+  }
+
+  .home-steps__title {
+    font-size: 30px;
+  }
+}
+
+/* ---------- Footer ---------- */
+
+.site-footer {
+  margin-top: auto;
+  padding: 20px 24px 28px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.site-footer strong {
+  color: var(--navy);
+}
+
+.site-footer--center {
+  justify-content: center;
+  border-top: none;
+  text-align: center;
+}
+
+@media (min-width: 992px) {
+  .site-footer {
+    padding: 22px 80px;
+    font-size: 14px;
+  }
+
+  .site-footer--center {
+    padding: 20px 80px 28px;
+  }
+}
+
+/* ---------- Form pendaftaran ---------- */
+
+.form-page {
+  padding-bottom: 28px;
+}
+
+@media (min-width: 992px) {
+  .form-page {
+    padding-top: 40px;
+    padding-bottom: 48px;
+  }
+}
+
+.form-heading {
+  padding: 8px 8px 20px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-subtitle {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.form-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (min-width: 992px) {
+  .form-layout {
+    display: grid;
+    grid-template-columns: 400px minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
+}
+
+.form-panel {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .form-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    padding: 32px 28px;
+    border-radius: 24px;
+    background: var(--navy);
+    color: #FFFFFF;
+    position: relative;
+    overflow: hidden;
+  }
+}
+
+.form-panel__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-panel__eyebrow {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--on-navy-muted);
+}
+
+.form-panel__title {
+  font-size: 26px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.form-panel__facts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--on-navy-strong);
+}
+
+.form-panel__fact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-panel__fact svg {
+  color: var(--porprov-2);
+  flex-shrink: 0;
+}
+
+.form-panel__divider {
+  height: 1px;
+  background: var(--navy-line);
+}
+
+.form-panel__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-panel__steps-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.form-panel__step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--on-navy);
+}
+
+.form-card {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (min-width: 992px) {
+  .form-card {
+    border-radius: 24px;
+    padding: 36px 40px;
+    gap: 22px;
+  }
+}
+
+.form-card__heading {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (min-width: 992px) {
+  .form-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 24px;
+  }
+}
+
+.turnstile-box {
+  min-height: 66px;
+  display: flex;
+  align-items: center;
+}
+
+.form-submit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (min-width: 992px) {
+  .form-submit-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-top: 4px;
+  }
+
+  .form-submit-row .btn-primary {
+    width: auto;
+    padding: 0 56px;
+  }
+
+  .turnstile-box {
+    width: 300px;
+  }
+}
+
+.form-consent {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.form-consent--page {
+  padding: 20px 24px 28px;
+}
+
+/* ---------- Kartu terpusat (Sukses & Status) ---------- */
+
+.centered-page {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.centered-card-wrap {
+  padding: 24px 16px 0;
+}
+
+.centered-card-wrap--status {
+  padding: 28px 16px 0;
+}
+
+@media (min-width: 992px) {
+  .centered-card-wrap,
+  .centered-card-wrap--status {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+}
+
+.card--success {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.card--status {
+  width: 100%;
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+@media (min-width: 992px) {
+  .card--status {
+    padding: 48px;
+  }
+
+  .card--success .h1-page,
+  .card--status .h1-page {
+    font-size: 32px;
+  }
+
+  .card--success .card__body,
+  .card--status .card__body {
+    max-width: 460px;
+    font-size: 16px;
+  }
+}
+
+.card__body {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.success-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.success-actions__secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--blue);
+  text-decoration: none;
+}
+
+@media (min-width: 992px) {
+  .success-actions {
+    width: auto;
+    flex-direction: row;
+    gap: 12px;
+    margin-top: 6px;
+  }
+
+  .success-actions .btn-primary {
+    width: auto;
+    height: 54px;
+    padding: 0 36px;
+    font-size: 16px;
+  }
+
+  .success-actions__secondary {
+    height: 54px;
+    padding: 0 28px;
+    border: 1.5px solid var(--input-border);
+    border-radius: 14px;
+    color: var(--navy);
+    font-size: 16px;
+    font-weight: 700;
+  }
+}
+
+.page-note {
+  padding: 20px 28px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: center;
+}
+
+.card-note {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.btn-secondary--status {
+  height: 52px;
+  font-size: 16px;
+  margin-top: 8px;
+}
+
+@media (min-width: 992px) {
+  .btn-secondary--status {
+    width: auto;
+    padding: 0 32px;
+  }
 }

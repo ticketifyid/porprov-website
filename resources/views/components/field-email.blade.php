@@ -9,6 +9,18 @@
 
 @php
     $domains = ['gmail.com', 'yahoo.com', 'yahoo.co.id', 'outlook.com', 'icloud.com'];
+
+    $domainValue = mb_strtolower(trim((string) $domainValue));
+    $domainOtherValue = mb_strtolower(trim((string) $domainOtherValue));
+
+    // "Lainnya…" yang ternyata berisi domain dari daftar ditampilkan sebagai
+    // pilihan dropdown biasa, sama dengan perlakuan server
+    // (App\Http\Requests\Public\StoreRegistrationRequest).
+    if (! in_array($domainValue, $domains, true) && in_array($domainOtherValue, $domains, true)) {
+        $domainValue = $domainOtherValue;
+        $domainOtherValue = '';
+    }
+
     $isCustomDomain = ! in_array($domainValue, $domains, true);
 @endphp
 
@@ -36,7 +48,11 @@
     <div class="email-preview">Email lengkap: <strong data-email-preview>&mdash;</strong></div>
     <div class="field__helper">Satu email hanya bisa mendaftar sekali.</div>
 
-    @error($localName)
-        <div class="field__error">{{ $message }}</div>
-    @enderror
+    {{-- Email dirakit dari tiga field, tapi errornya selalu tampil di sini
+         (docs/arsitektur.md Fase 1 langkah 3). --}}
+    @foreach ([$localName, $domainName, $domainOtherName] as $errorKey)
+        @error($errorKey)
+            <div class="field__error">{{ $message }}</div>
+        @enderror
+    @endforeach
 </div>

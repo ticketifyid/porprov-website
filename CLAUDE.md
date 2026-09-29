@@ -40,6 +40,7 @@ Kuota 3.600 tiket. Maksimal 4 tiket per pendaftaran. 1 pendaftaran = 1 QR, dituk
     - domain `googlemail.com` diperlakukan sebagai `gmail.com`.
     - khusus domain `gmail.com` (setelah normalisasi di atas): buang semua titik di bagian nama, dan buang bagian setelah tanda `+` (termasuk tandanya).
     - domain lain: cukup lowercase + trim, tanpa modifikasi lain.
+14. **Semua CSS/JS milik proyek dimuat lewat `@versionedAsset`**, bukan `asset()` biasa — termasuk yang dipakai di halaman admin dan scanner yang memakai layout Metronic. Directive ini (`AppServiceProvider` → `App\Support\AssetVersion`) menambahkan `?v={filemtime}` supaya browser mengambil ulang file begitu isinya berubah; tanpa build tool, ini satu-satunya cache busting yang kita punya. HANYA file di `public/metronic/` yang memakai `asset()` biasa, karena isinya tidak pernah diubah.
 
 ## Dilarang
 
