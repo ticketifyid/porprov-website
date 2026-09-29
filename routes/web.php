@@ -9,6 +9,12 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+if (app()->environment('local')) {
+    Route::get('/_styleguide', function () {
+        return view('public._styleguide');
+    });
+}
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);

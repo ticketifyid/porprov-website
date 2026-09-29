@@ -1,0 +1,1097 @@
+/*
+ * Ticketify — halaman peserta
+ * Token dan nilai visual mengikuti docs/design/DESIGN.md dan artboard di
+ * docs/design/artboards/*.dc.html persis. Jangan menebak nilai baru di sini.
+ * Breakpoint: 768px (kasus tertentu, lihat DESIGN.md) dan 992px (mobile -> desktop).
+ */
+
+:root {
+  --navy: #0E2A6B;
+  --blue: #1F5FD6;
+  --blue-hover: #123F9E;
+  --ground: #EEF3FB;
+  --surface: #FFFFFF;
+  --ink: #0B1B3F;
+  --muted: #4B5A7A;
+  --line: #D6DEEC;
+  --input-border: #C5D0E3;
+  --disabled-bg: #F1F4F9;
+  --disabled-ink: #8C98B0;
+  --on-navy: #D5E0F8;
+  --on-navy-muted: #B9CCF5;
+  --success: #179C52;
+  --success-bg: #E3F4EA;
+  --success-ink: #0F6A3B;
+  --info-bg: #E6EEFC;
+  --info-ink: #123F9E;
+  --warn-bg: #FFF1DC;
+  --warn-ink: #7A3E00;
+  --error: #B42318;
+  --gelang-bg: #FFF6D6;
+  --gelang-ink: #3D2E00;
+
+  --porprov-1: #179C52;
+  --porprov-2: #F2B705;
+  --porprov-3: #D93A2B;
+  --porprov-4: #1F5FD6;
+}
+
+/* ---------- Reset minimal ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: var(--ground);
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+h1, h2, h3, p, dl, dd {
+  margin: 0;
+}
+
+ul, ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--blue-hover);
+}
+
+button {
+  font-family: inherit;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* ---------- Layout ---------- */
+
+.page-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+@media (min-width: 768px) {
+  .page-container {
+    padding: 0 24px;
+  }
+}
+
+@media (min-width: 992px) {
+  .page-container {
+    padding: 0 80px;
+  }
+}
+
+/* Menampilkan blok berbeda untuk mobile/desktop pada komponen yang secara
+   struktural berbeda antar breakpoint (bukan sekadar reflow CSS). */
+.u-mobile-only {
+  display: flex;
+}
+
+.u-desktop-only {
+  display: none;
+}
+
+@media (min-width: 992px) {
+  .u-mobile-only {
+    display: none;
+  }
+
+  .u-desktop-only {
+    display: flex;
+  }
+}
+
+/* ---------- Tipografi ---------- */
+
+.eyebrow {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--blue);
+}
+
+.eyebrow-on-navy {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--on-navy-muted);
+}
+
+.tagline-caveat {
+  font-family: 'Caveat', cursive;
+  font-size: 28px;
+  line-height: 1.1;
+  color: var(--navy);
+  transform: rotate(-2deg);
+  transform-origin: left;
+}
+
+@media (min-width: 992px) {
+  .tagline-caveat {
+    font-size: 38px;
+  }
+}
+
+.h1-hero {
+  font-size: 34px;
+  line-height: 1.12;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--navy);
+}
+
+@media (min-width: 992px) {
+  .h1-hero {
+    font-size: 58px;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+  }
+}
+
+.h1-page {
+  font-size: 26px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: var(--navy);
+}
+
+@media (min-width: 992px) {
+  .h1-page {
+    font-size: 30px;
+  }
+}
+
+/* ---------- Strip Porprov ---------- */
+
+.strip-porprov {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  height: 6px;
+}
+
+.strip-porprov > div:nth-child(1) { background: var(--porprov-1); }
+.strip-porprov > div:nth-child(2) { background: var(--porprov-2); }
+.strip-porprov > div:nth-child(3) { background: var(--porprov-3); }
+.strip-porprov > div:nth-child(4) { background: var(--porprov-4); }
+
+/* ---------- Header ---------- */
+
+.header-mobile {
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 4px;
+}
+
+.header-mobile--center {
+  justify-content: center;
+  padding: 20px 24px 0;
+}
+
+.back-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--navy);
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--blue-hover);
+}
+
+.header-desktop {
+  height: 84px;
+  padding: 0 80px;
+  background: var(--surface);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-desktop__logo-link {
+  display: flex;
+  align-items: center;
+}
+
+.header-desktop__nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.header-desktop__label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.nav-link {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--navy);
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  color: var(--blue-hover);
+}
+
+/* ---------- Tombol ---------- */
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  padding: 0 24px;
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-primary {
+  background: var(--navy);
+  color: #FFFFFF;
+}
+
+.btn-primary:hover {
+  color: #FFFFFF;
+  opacity: 0.94;
+}
+
+.btn-primary:disabled {
+  background: var(--disabled-bg);
+  color: var(--disabled-ink);
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1.5px solid var(--navy);
+  color: var(--navy);
+}
+
+.btn-secondary:hover {
+  color: var(--blue-hover);
+  border-color: var(--blue-hover);
+}
+
+.btn-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--blue);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-text:hover {
+  color: var(--blue-hover);
+}
+
+.btn-primary-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 12px;
+  background: var(--navy);
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary-sm:hover {
+  color: #FFFFFF;
+  opacity: 0.94;
+}
+
+/* ---------- Field ---------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.field input,
+.field select {
+  height: 50px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border: 1.5px solid var(--input-border);
+  border-radius: 12px;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--ink);
+  background: #FFFFFF;
+}
+
+.field select {
+  padding: 0 12px;
+}
+
+.field__helper {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.field__error {
+  font-size: 13px;
+  color: var(--error);
+}
+
+@media (min-width: 992px) {
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 24px;
+  }
+
+  .field--span-2 {
+    grid-column: span 2;
+  }
+}
+
+/* ---------- Field email (nama + dropdown domain) ---------- */
+
+.field-email-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-email-group label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.email-compound {
+  display: flex;
+  align-items: center;
+  height: 50px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--input-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #FFFFFF;
+}
+
+.email-compound input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  padding: 0 12px;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--ink);
+  background: transparent;
+}
+
+.email-compound input:focus {
+  outline: none;
+}
+
+.email-compound .at-sign {
+  padding: 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.email-compound select {
+  flex: 0 0 136px;
+  height: 100%;
+  border: none;
+  border-left: 1.5px solid var(--input-border);
+  padding: 0 8px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--ink);
+  background: #F6F8FC;
+}
+
+.domain-other {
+  height: 50px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border: 1.5px solid var(--input-border);
+  border-radius: 12px;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--ink);
+  background: #FFFFFF;
+}
+
+.email-preview {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.email-preview strong {
+  color: var(--ink);
+}
+
+/* ---------- Stepper jumlah tiket ---------- */
+
+.stepper-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stepper-group__label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--input-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.stepper-btn {
+  width: 56px;
+  height: 52px;
+  border: none;
+  background: #FFFFFF;
+  color: var(--navy);
+  font-size: 24px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.stepper-btn:disabled {
+  background: var(--disabled-bg);
+  color: var(--disabled-ink);
+  cursor: not-allowed;
+}
+
+.stepper-output {
+  width: 64px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--navy);
+}
+
+.stepper-helper {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+  text-align: right;
+}
+
+.stepper-quota-msg {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--error);
+}
+
+@media (min-width: 992px) {
+  .stepper-row {
+    justify-content: flex-start;
+    gap: 16px;
+  }
+
+  .stepper {
+    border-radius: 12px;
+  }
+
+  .stepper-btn {
+    width: 52px;
+    height: 47px;
+    font-size: 22px;
+  }
+
+  .stepper-output {
+    width: 56px;
+    font-size: 20px;
+  }
+
+  .stepper-helper {
+    text-align: left;
+  }
+}
+
+/* ---------- Alert ---------- */
+
+.alert {
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.alert__icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.alert__text strong {
+  font-weight: 800;
+}
+
+.alert-warn {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+
+.alert-info {
+  background: var(--info-bg);
+  color: var(--info-ink);
+}
+
+@media (min-width: 992px) {
+  .alert {
+    padding: 14px 16px;
+    font-size: 15px;
+  }
+
+  .alert__icon {
+    margin-top: 2px;
+  }
+}
+
+/* ---------- Badge ---------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.badge-success {
+  background: var(--success-bg);
+  color: var(--success-ink);
+}
+
+.badge-info {
+  background: var(--info-bg);
+  color: var(--info-ink);
+}
+
+/* ---------- Kartu ---------- */
+
+.card {
+  background: var(--surface);
+  border-radius: 20px;
+}
+
+.card--success,
+.card--status {
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  border-radius: 24px;
+}
+
+@media (min-width: 992px) {
+  .card--success,
+  .card--status {
+    padding: 44px 48px;
+    border-radius: 28px;
+    gap: 18px;
+  }
+}
+
+.icon-circle {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 76px;
+  height: 76px;
+}
+
+.icon-circle--success {
+  background: var(--success);
+  color: #FFFFFF;
+}
+
+.icon-circle--info {
+  background: var(--info-bg);
+  color: var(--navy);
+}
+
+@media (min-width: 992px) {
+  .icon-circle {
+    width: 84px;
+    height: 84px;
+  }
+}
+
+.summary-box {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--ground);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+}
+
+.summary-box__col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summary-box__col--right {
+  align-items: flex-end;
+}
+
+.summary-box__label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.summary-box__value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--navy);
+}
+
+@media (min-width: 992px) {
+  .summary-box {
+    border-radius: 18px;
+    padding: 18px 22px;
+  }
+
+  .summary-box__label {
+    font-size: 14px;
+  }
+
+  .summary-box__value {
+    font-size: 26px;
+    letter-spacing: 0.05em;
+  }
+}
+
+/* ---------- Langkah bernomor ---------- */
+
+.step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+@media (min-width: 768px) {
+  .step-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (min-width: 992px) {
+  .step-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.step-item {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.step-item__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 6px;
+}
+
+.step-item__title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.step-item__desc {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+@media (min-width: 992px) {
+  .step-item {
+    background: #FFFFFF;
+    border-radius: 20px;
+    padding: 24px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .step-item__body {
+    padding-top: 0;
+    gap: 0;
+  }
+
+  .step-item__title {
+    font-size: 17px;
+  }
+
+  .step-item__desc {
+    font-size: 15px;
+  }
+}
+
+.step-number {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+}
+
+.step-number--default {
+  background: var(--navy);
+  color: #FFFFFF;
+}
+
+.step-number--success {
+  background: var(--success);
+  color: #FFFFFF;
+}
+
+.step-number--inverse {
+  background: #FFFFFF;
+  color: var(--navy);
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+}
+
+@media (min-width: 992px) {
+  .step-number--default,
+  .step-number--success {
+    width: 40px;
+    height: 40px;
+    font-size: 17px;
+  }
+}
+
+/* ---------- Tiket ---------- */
+
+.ticket-card {
+  background: var(--surface);
+  border-radius: 24px;
+}
+
+@media (min-width: 992px) {
+  .ticket-card {
+    border-radius: 28px;
+  }
+}
+
+.ticket-card__mobile {
+  display: flex;
+  flex-direction: column;
+}
+
+.ticket-card__top {
+  padding: 24px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.ticket-card__bottom {
+  padding: 20px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ticket-card__desktop {
+  display: none;
+}
+
+@media (min-width: 992px) {
+  .ticket-card__mobile {
+    display: none;
+  }
+
+  .ticket-card__desktop {
+    display: grid;
+    grid-template-columns: 380px 28px minmax(0, 1fr);
+  }
+}
+
+.ticket-card__col-qr {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.ticket-card__col-details {
+  padding: 32px 40px 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.ticket-card__toprow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ticket-card__hint {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.code-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.code-block__label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.code-block__value {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--navy);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 992px) {
+  .code-block__value {
+    font-size: 26px;
+  }
+}
+
+.qr-frame {
+  position: relative;
+  width: 236px;
+  height: 236px;
+  padding: 14px;
+  box-sizing: border-box;
+  border: 2px solid #E1E7F2;
+  border-radius: 16px;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 992px) {
+  .qr-frame {
+    width: 260px;
+    height: 260px;
+  }
+}
+
+.qr-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-overlay__label {
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--success-ink);
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+@media (min-width: 992px) {
+  .qr-overlay__label {
+    font-size: 16px;
+  }
+}
+
+.gelang-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--gelang-bg);
+}
+
+.gelang-box__label {
+  font-size: 13px;
+  color: #6B5100;
+}
+
+.gelang-box__value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--gelang-ink);
+}
+
+@media (min-width: 992px) {
+  .gelang-box {
+    padding: 18px 22px;
+  }
+
+  .gelang-box__value {
+    font-size: 24px;
+  }
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+  font-size: 14px;
+}
+
+.detail-grid dt {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.detail-grid dd {
+  font-weight: 700;
+  margin: 0;
+}
+
+@media (min-width: 992px) {
+  .detail-grid {
+    gap: 16px 24px;
+    font-size: 15px;
+  }
+}
+
+.ticket-perforation--horizontal {
+  position: relative;
+  height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.ticket-perforation--horizontal .ticket-perforation__notch {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--navy);
+}
+
+.ticket-perforation--horizontal .ticket-perforation__notch--left { left: -12px; }
+.ticket-perforation--horizontal .ticket-perforation__notch--right { right: -12px; }
+
+.ticket-perforation--horizontal .ticket-perforation__dash {
+  flex-grow: 1;
+  margin: 0 20px;
+  border-top: 2px dashed var(--line);
+}
+
+.ticket-perforation--vertical {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.ticket-perforation--vertical .ticket-perforation__notch {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--navy);
+}
+
+.ticket-perforation--vertical .ticket-perforation__notch--top { top: -14px; }
+.ticket-perforation--vertical .ticket-perforation__notch--bottom { bottom: -14px; }
+
+.ticket-perforation--vertical .ticket-perforation__dash {
+  margin: 24px 0;
+  border-left: 2px dashed var(--line);
+}
