@@ -1,0 +1,369 @@
+/*
+ * Halaman scanner (Fase 7). Hanya dipakai di layouts/scanner.blade.php, di
+ * atas Metronic. Tidak memakai token desain peserta (public/css/app.css) —
+ * docs/design/DESIGN.md menyatakan halaman scanner tidak mengikuti dokumen itu.
+ *
+ * Prioritasnya: hasil scan terbaca sekali lirik dari HP di bawah sinar
+ * matahari, dan tombolnya cukup besar untuk jempol.
+ */
+
+:root {
+    --scan-success-bg: #0F7B3F;
+    --scan-danger-bg: #B4201C;
+    --scan-neutral-bg: #4A5568;
+    --scan-info-bg: #1B4F9C;
+    --scan-on-panel: #FFFFFF;
+}
+
+body.scanner-body {
+    background: #F3F4F6;
+}
+
+.scanner-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #16213E;
+    color: #FFFFFF;
+}
+
+.scanner-topbar__who {
+    min-width: 0;
+    line-height: 1.2;
+}
+
+.scanner-topbar__name {
+    display: block;
+    font-weight: 700;
+    font-size: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scanner-topbar__role {
+    display: block;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.scanner-topbar__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.scanner-topbar__btn {
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: transparent;
+    color: #FFFFFF;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.scanner-topbar__btn[aria-pressed="false"] {
+    opacity: 0.55;
+}
+
+.scanner-main {
+    padding: 14px;
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+/* ---------- pemilih mode ---------- */
+
+.scanner-modes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.scanner-mode {
+    appearance: none;
+    border: 2px solid #CBD5E1;
+    background: #FFFFFF;
+    color: #1F2937;
+    border-radius: 12px;
+    padding: 14px 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.scanner-mode[aria-pressed="true"] {
+    border-color: #16213E;
+    background: #16213E;
+    color: #FFFFFF;
+}
+
+.scanner-hint {
+    font-size: 13px;
+    color: #4B5563;
+    margin: 0 0 14px;
+}
+
+.scanner-warn {
+    background: #FFF6D6;
+    color: #3D2E00;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0 0 14px;
+}
+
+/* ---------- panel hasil ---------- */
+
+.scan-result {
+    border-radius: 16px;
+    padding: 22px 18px 24px;
+    color: var(--scan-on-panel);
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.scan-result[hidden] {
+    display: none;
+}
+
+.scan-result--success {
+    background: var(--scan-success-bg);
+}
+
+.scan-result--danger {
+    background: var(--scan-danger-bg);
+}
+
+.scan-result--neutral {
+    background: var(--scan-neutral-bg);
+}
+
+.scan-result--info {
+    background: var(--scan-info-bg);
+}
+
+.scan-result__headline {
+    font-size: 30px;
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+.scan-result__qty {
+    display: block;
+    font-size: 64px;
+    line-height: 1;
+    font-weight: 800;
+    margin: 6px 0 2px;
+}
+
+.scan-result__detail {
+    font-size: 16px;
+    line-height: 1.45;
+    margin: 12px 0 0;
+}
+
+.scan-result__detail strong {
+    font-size: 19px;
+}
+
+.scan-result__code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 18px;
+    letter-spacing: 1px;
+}
+
+.scan-result__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.scan-btn {
+    appearance: none;
+    border: none;
+    border-radius: 12px;
+    padding: 16px 18px;
+    font-size: 17px;
+    font-weight: 800;
+    cursor: pointer;
+    min-height: 56px;
+}
+
+.scan-btn--confirm {
+    background: #FFFFFF;
+    color: #0F7B3F;
+}
+
+.scan-btn--next {
+    background: rgba(255, 255, 255, 0.18);
+    color: #FFFFFF;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+/* ---------- kamera ---------- */
+
+.scanner-camera[hidden],
+.scanner-manual[hidden],
+.scanner-hardware[hidden] {
+    display: none;
+}
+
+#reader {
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #111827;
+}
+
+#reader video {
+    width: 100% !important;
+    height: auto !important;
+    display: block;
+}
+
+/* ---------- alat scanner ---------- */
+
+.scanner-hardware {
+    background: #FFFFFF;
+    border: 2px dashed #94A3B8;
+    border-radius: 12px;
+    padding: 20px 16px;
+    text-align: center;
+    color: #374151;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+/* ---------- pencarian manual ---------- */
+
+.scanner-manual {
+    background: #FFFFFF;
+    border-radius: 12px;
+    padding: 14px;
+    margin-top: 16px;
+}
+
+.scanner-manual__label {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1F2937;
+    margin-bottom: 6px;
+}
+
+.scanner-manual__row {
+    display: flex;
+    gap: 8px;
+}
+
+.scanner-manual__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 2px solid #CBD5E1;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 16px;
+    min-height: 50px;
+}
+
+.scanner-manual__submit {
+    flex: 0 0 auto;
+    border: none;
+    border-radius: 10px;
+    background: #16213E;
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 12px 16px;
+    min-height: 50px;
+    cursor: pointer;
+}
+
+.scanner-manual__note {
+    font-size: 13px;
+    color: #4B5563;
+    margin: 10px 0 0;
+}
+
+.scan-candidates {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.scan-candidate {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 2px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.scan-candidate__name {
+    font-weight: 700;
+    font-size: 15px;
+    color: #111827;
+}
+
+.scan-candidate__meta {
+    font-size: 13px;
+    color: #4B5563;
+}
+
+.scan-candidate__pick {
+    appearance: none;
+    border: none;
+    border-radius: 8px;
+    background: #0F7B3F;
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 10px 14px;
+    min-height: 44px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.scan-candidate__pick[disabled] {
+    background: #94A3B8;
+    cursor: not-allowed;
+}
+
+@media (min-width: 768px) {
+    .scan-result__headline {
+        font-size: 40px;
+    }
+
+    .scan-result__qty {
+        font-size: 84px;
+    }
+
+    .scan-result__actions {
+        flex-direction: row;
+        justify-content: center;
+    }
+
+    .scan-btn {
+        min-width: 220px;
+    }
+}

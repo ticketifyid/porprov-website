@@ -19,4 +19,13 @@ class RegistrationCodeGeneratorTest extends TestCase
             $this->assertStringNotContainsString('U', $code);
         }
     }
+
+    public function test_normalize_for_search_menyamakan_huruf_kecil_spasi_tanda_hubung_dan_o_i_l(): void
+    {
+        $this->assertSame('PJT2670K3M9', RegistrationCodeGenerator::normalizeForSearch(' pjt26 7ok3m9 '));
+        $this->assertSame('PJT2670K3M9', RegistrationCodeGenerator::normalizeForSearch('PJT26-70K3M9'));
+        $this->assertSame('PJT261K3M9Q', RegistrationCodeGenerator::normalizeForSearch('pjt26-lk3m9q'));
+        $this->assertSame('PJT261K3M9Q', RegistrationCodeGenerator::normalizeForSearch('pjt26_ik3m9q'));
+        $this->assertSame('', RegistrationCodeGenerator::normalizeForSearch('   '));
+    }
 }

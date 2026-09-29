@@ -45,5 +45,8 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::middleware('role:scanner')->group(function () {
         Route::get('/scanner', [ScanController::class, 'index'])->name('scanner.index');
+        Route::post('/scan', [ScanController::class, 'scan'])->name('scanner.scan');
+        Route::post('/scan/cari', [ScanController::class, 'search'])->name('scanner.search');
+        Route::post('/scan/{registration}/redeem', [ScanController::class, 'redeem'])->name('scanner.redeem');
     });
 });

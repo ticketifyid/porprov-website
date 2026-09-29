@@ -69,6 +69,27 @@ Catatan penting:
 - Zona waktu: `config/app.php` → `timezone` kini `env('APP_TIMEZONE', 'UTC')`, dan `APP_TIMEZONE=Asia/Jakarta` diisi di `.env` dan `.env.example`. Jam pada badge "Sudah ditukar" tampil WIB. `registration_open_at`/`close_at`/`event_starts_at` disimpan dan dibaca dalam zona yang sama (kolom DATETIME MySQL tanpa info zona), jadi **data jadwal yang sudah tersimpan sebelum perubahan ini (diisi dalam UTC) bergeser 7 jam** dan harus diisi ulang lewat halaman admin. Seluruh tes lulus dengan zona WIB, termasuk logika jadwal pendaftaran Fase 4.
 - `public/css/app.css` menambah bagian "Fase 6" (halaman tiket berlatar navy, cari tiket, utilitas `u-*-only-inline`). Semua nilai dikutip dari artboard `Tiket`, `DesktopTiket`, `LupaTiket`, `DesktopLupaTiket`.
 
+### Penyimpangan disetujui pada Fase 7
+
+- **Tampilan fokus scanner** (menjawab "Catatan untuk Fase 7" di bawah): `resources/views/layouts/scanner.blade.php` (baru) memakai Metronic `app-blank` tanpa sidebar/toolbar, hanya header tipis berisi nama + role petugas, tombol suara, link Dashboard (khusus admin), dan tombol Keluar. `scanner/index.blade.php` tidak lagi mewarisi `layouts/admin.blade.php`.
+- **`app/Enums/ScanResult.php`**: enum `success` / `already_redeemed` / `not_found`, cermin enum kolom `scan_logs.result`. Nilai balik `RedeemRegistration` dan isi payload JSON.
+- **`RedeemRegistration` punya tiga method**, bukan satu: `handle()` (update bersyarat + log), `logMiss()` (QR tidak dikenal, `registration_id` null), `logAlreadyRedeemed()` (langkah pertama kamera/manual atas tiket yang sudah tertukar). Alasannya semua penulisan `scan_logs` harus tetap di satu kelas, termasuk percobaan yang tidak meng-update apa pun.
+- **Langkah pertama kamera tidak menulis `scan_logs`** kalau tiketnya masih valid dan belum ditukar. Enum `result` hanya mengenal `success`/`already_redeemed`/`not_found`, dan `success` harus berarti gelang benar-benar diserahkan — jadi yang tercatat untuk jalur kamera adalah konfirmasinya. Percobaan yang berakhir `not_found` atau `already_redeemed` tetap dicatat di langkah pertama.
+- **Respons JSON, bukan redirect.** `POST /scan`, `POST /scan/cari`, dan `POST /scan/{registration}/redeem` membalas JSON; panel hasil digambar `public/js/scanner.js`. Alasannya kamera tidak boleh ter-reload (html5-qrcode harus di-init ulang setiap reload) dan ketiga jalur jadi memakai satu gaya yang sama. Nilai `result` yang dikenal klien: `success`, `already_redeemed`, `not_found`, `pending_confirm` (khusus langkah pertama kamera), `candidates` dan `too_short` (khusus pencarian manual).
+- **Rute tambahan `POST /scan/cari`** (`ScanController@search`) untuk langkah pertama pencarian manual — bentuk responsnya daftar kandidat, bukan hasil satu tiket, jadi dipisah dari `POST /scan`.
+- **Payload JSON hanya data layar petugas**: id, kode, nama, kab/kota, jumlah tiket, status + jam + nama petugas penukar. `token`, email, dan nomor HP utuh tidak pernah dikirim ke klien.
+- **Validasi inline** di `ScanController` lewat `$request->validate(...)`, mengikuti preseden `LoginController` di Fase 2 — tidak ada `Requests/Scanner/`.
+- **`RegistrationCodeGenerator::normalizeForSearch()`** (bukan helper `Support/` baru): uppercase, buang semua karakter selain `0-9A-Z` (termasuk spasi dan tanda hubung), `O`→`0`, `I`/`L`→`1`. Dibandingkan di database dengan `REPLACE(code, '-', '')` supaya `pjt26 7ok3m9` menemukan `PJT26-70K3M9`. Ditaruh di kelas itu karena aturan substitusi itu memang milik alfabet Crockford Base32 (aturan 6).
+- **Aset baru**: `public/css/scanner.css` (panel hasil besar/kontras; tidak memakai token `docs/design/DESIGN.md` karena dokumen itu menyatakan halaman scanner memakai Metronic), `public/js/scanner.js` (inti: mode, fetch, panel, pencarian manual, umpan balik), `public/js/scanner-camera.js`, `public/js/scanner-hardware.js`, dan `public/js/vendor/html5-qrcode.min.js`. Semuanya dimuat lewat `@versionedAsset` (aturan 14).
+- **html5-qrcode di-self-host** (`public/js/vendor/html5-qrcode.min.js`, v2.3.8, di-commit) alih-alih CDN: tidak ada daftar "CDN yang diizinkan" di dokumen mana pun, dan hari H tidak boleh bergantung pada domain pihak ketiga. Urutan `<script>` di layout: vendor → `scanner-camera.js` → `scanner-hardware.js` → `scanner.js` terakhir, karena `scanner.js` memanggil `init()` dan menerapkan mode terakhir (localStorage) lewat event `scanner:mode` yang listener-nya harus sudah terpasang.
+- **Timeout fetch 8 detik** lewat `AbortController` di `scanner.js`. Timeout atau error jaringan → panel abu-abu "Koneksi gagal. Silakan scan ulang."; flag `busy` selalu dilepas di `finally` supaya satu kegagalan tidak membuat halaman berhenti menerima scan.
+- **Penanda `recent_self`**: kalau `already_redeemed` sedangkan `redeemed_by` adalah petugas yang sedang login DAN `redeemed_at` kurang dari 2 menit lalu, JSON menambah `recent_self: true` dan panel tampil netral ("Baru saja Anda tukar pukul HH.MM (N gelang)"), bukan merah. Alat scanner kadang mengirim dua kali dan petugas kadang memindai ulang karena ragu; itu bukan indikasi tiket ganda. `scan_logs.result` tetap `already_redeemed`.
+- **Input berkecepatan alat menang atas kotak pencarian manual**: `docs/arsitektur.md` menulis "listener keyboard mengabaikan event dari `input`/`textarea`". Di mode alat scanner, yang diabaikan hanyalah ketikan berkecepatan manusia — rentetan dengan jeda antar karakter < 50 ms, panjang 48, diakhiri `Enter` tetap diperlakukan sebagai scan meski fokus ada di kotak pencarian; kotak pencarian dikosongkan dan pencariannya tidak dikirim. Tanpa ini petugas yang lupa memindahkan fokus akan "kehilangan" scan-nya ke dalam kotak teks.
+- **Umpan balik suara + getar**: nada pendek lewat Web Audio API (oscillator, tanpa file audio) dan `navigator.vibrate`, dengan pola berbeda untuk `success`, `already_redeemed`, `not_found`, dan gagal koneksi. Tombol "Suara: nyala/mati" di header, pilihannya disimpan di `localStorage` (`scanner.sound`, sejalan dengan `scanner.mode`). Semua pemanggilannya dibungkus `try/catch` karena browser bisa menolak audio sebelum ada interaksi pengguna.
+- **Pencarian manual nama minimal 3 karakter**, divalidasi di server (`ScanController::MIN_NAME_LENGTH`): di bawah itu responsnya `{result: 'too_short', message: 'Ketik minimal 3 karakter nama.'}` tanpa hasil dan tanpa baris `scan_logs`. Input dianggap nomor HP bila berisi ≥ 7 digit, dan kandidat dibatasi 10 baris supaya layar HP tetap terbaca.
+- **Pemaksaan HTTPS bukan bagian fase ini.** `docs/arsitektur.md` mewajibkan halaman scanner memakai HTTPS; yang ada sekarang hanya peringatan di halaman kalau request tidak `secure()` (kamera memang tidak akan diizinkan browser). Konfigurasi HTTPS-nya masuk `docs/deploy.md` di Fase 9.
+- `tests/Feature/ScanTest.php` menutup: kamera tidak mengubah status, konfirmasi kamera, hardware langsung redeem, redeem kedua (`redeemed_at` tidak berubah), `recent_self` (petugas sama < 2 menit vs petugas lain / > 2 menit), `not_found`, normalisasi kode manual, pencarian nama/HP multi-kandidat, nama < 3 karakter, petugas nonaktif, guest, dan admin.
+
 ```
 app/
   Actions/
@@ -81,6 +102,7 @@ app/
     AssetVersion.php                  # cache busting ?v=filemtime, ditambahkan Fase 4 (lihat catatan)
   Enums/
     UserRole.php                      # admin / scanner, ditambahkan Fase 2 (lihat catatan di atas)
+    ScanResult.php                    # success / already_redeemed / not_found, ditambahkan Fase 7
   Contracts/
     TicketNotifier.php
   Services/
@@ -93,7 +115,7 @@ app/
         RegistrationController.php    # POST /daftar, panggil RegisterAttendee
         TicketController.php          # /tiket/{token}, /cari-tiket
       Scanner/
-        ScanController.php            # POST /scan, /scan/{registration}/redeem, panggil RedeemRegistration
+        ScanController.php            # GET /scanner, POST /scan, /scan/cari, /scan/{registration}/redeem; panggil RedeemRegistration
       Admin/
         DashboardController.php
         EventController.php           # jadwal & kuota
@@ -143,6 +165,7 @@ resources/
     layouts/
       public.blade.php                  # font Plus Jakarta Sans + Caveat
       admin.blade.php                   # Metronic (dipasang setelah Fase 2, lihat catatan di atas)
+      scanner.blade.php                 # Metronic app-blank tanpa sidebar, ditambahkan Fase 7
     components/                         # strip-porprov, header, button-primary, field, stepper, ticket-card, dst
     public/
       home.blade.php
@@ -161,14 +184,19 @@ resources/
       users/
 
 public/
-  css/app.css
+  css/
+    app.css
+    scanner.css                         # panel hasil scan, ditambahkan Fase 7
   img/                                  # logo-porprov.png, hero-qr.svg (hiasan hero desktop)
   metronic/                             # disiapkan pemilik proyek sebelum Fase 2
   js/
     stepper.js
     email-domain.js
+    scanner.js                          # inti halaman scanner (Fase 7)
     scanner-hardware.js
     scanner-camera.js
+    vendor/
+      html5-qrcode.min.js               # v2.3.8, di-self-host (bukan CDN)
 
 routes/
   web.php                               # public + admin + scanner, digroup middleware
@@ -192,7 +220,9 @@ tests/
       RegistrationAdminTest.php
 ```
 
-## Catatan untuk Fase 7 (scanner)
+## Catatan untuk Fase 7 (scanner) — SUDAH DIJAWAB
+
+Keputusannya: `scanner/index.blade.php` memakai `layouts/scanner.blade.php` baru (Metronic `app-blank`, tanpa sidebar, header tipis). Lihat "Penyimpangan disetujui pada Fase 7" di atas. Catatan aslinya disimpan di bawah sebagai riwayat.
 
 Fase 2 memakai `layouts/admin.blade.php` (sidebar + header Metronic) apa adanya untuk `scanner/index.blade.php`, karena di fase itu halamannya masih kosong. Di Fase 7, hasil scan harus tampil **besar dan kontras** (hijau "SERAHKAN N GELANG", merah "SUDAH DITUKAR", abu "QR TIDAK DIKENAL") dan dipakai petugas dari HP di lapangan — sidebar Metronic akan memakan ruang layar dan mengganggu fokus. Saat mengerjakan Fase 7, tinjau ulang apakah `scanner/index.blade.php` perlu tampilan fokus tanpa sidebar (mis. varian `class="app-blank"` seperti `layouts/auth.blade.php`, header tipis berisi nama petugas + tombol keluar saja) alih-alih tetap mewarisi `layouts/admin.blade.php` penuh.
 

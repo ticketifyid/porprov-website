@@ -25,4 +25,21 @@ class RegistrationCodeGenerator
 
         return $prefix.'-'.$suffix;
     }
+
+    /**
+     * Bentuk padat sebuah kode untuk dibandingkan saat pencarian manual
+     * (docs/arsitektur.md Fase 4): uppercase, buang semua karakter selain
+     * 0-9/A-Z (termasuk spasi dan tanda hubung), lalu O -> 0 dan I/L -> 1
+     * karena huruf-huruf itu memang tidak ada di alfabet Crockford Base32 —
+     * petugas yang mengetik "O" pasti memaksudkan angka nol.
+     *
+     * Hasilnya BUKAN kode untuk ditampilkan (tanda hubungnya hilang); hanya
+     * untuk dicocokkan dengan REPLACE(code, '-', '') di sisi database.
+     */
+    public static function normalizeForSearch(string $input): string
+    {
+        $compact = preg_replace('/[^0-9A-Z]/', '', strtoupper($input)) ?? '';
+
+        return strtr($compact, ['O' => '0', 'I' => '1', 'L' => '1']);
+    }
 }
