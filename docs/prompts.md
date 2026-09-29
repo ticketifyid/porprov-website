@@ -21,11 +21,11 @@ Jangan menulis kode apa pun. Berikan:
 ```
 Kerjakan fondasi data sesuai docs/erd.md, persis.
 
-1. Migration untuk events, regencies, registrations, notification_logs, users (ganti migration users bawaan: username, role, is_active; tanpa email), scan_logs.
+1. Migration untuk events, regencies, registrations, notification_logs, users (edit langsung migration users bawaan: username, role, is_active, tanpa email; hapus tabel password_reset_tokens dari migration itu), scan_logs.
 2. Model + relasi + casts. Event::isOpen() sesuai docs/erd.md.
 3. Seeder: 1 event (Opening Ceremony Porprov Jateng XVII 2026, code_prefix PJT26, quota 3600, is_open false), 35 kab/kota Jawa Tengah + "Luar Jawa Tengah", 1 admin dari nilai .env (ADMIN_USERNAME, ADMIN_PASSWORD).
-4. Helper PhoneNormalizer (aturan 5 di CLAUDE.md) dan RegistrationCodeGenerator (aturan 6).
-5. Unit test untuk kedua helper: 0812.., +62812.., 62812.., "0812-3456 7890" → 628123456789..; kode cocok regex ^PJT26-[0-9A-HJKMNP-TV-Z]{6}$.
+4. Helper di app/Support/: PhoneNormalizer (aturan 5 di CLAUDE.md), RegistrationCodeGenerator (aturan 6), EmailCanonicalizer (aturan 13).
+5. Unit test untuk ketiga helper: PhoneNormalizer — 0812.., +62812.., 62812.., "0812-3456 7890" → 628123456789..; RegistrationCodeGenerator — kode cocok regex ^PJT26-[0-9A-HJKMNP-TV-Z]{6}$; EmailCanonicalizer — `B.u.di+x@Gmail.com` dan `budi@googlemail.com` → `budi@gmail.com`; domain selain gmail.com/googlemail.com tidak dibuang titiknya (mis. `b.udi@yahoo.com` tetap `b.udi@yahoo.com`).
 
 Selesai jika: migrate:fresh --seed berhasil dan semua tes lulus.
 ```
@@ -61,7 +61,8 @@ Implementasi alur pendaftaran sesuai docs/arsitektur.md Fase 1 dan artboard Main
 TULIS FEATURE TEST DULU, pastikan gagal, baru implementasi:
 - qty melebihi sisa → ditolak dengan pesan "Sisa kuota tinggal N tiket. Silakan kurangi jumlah tiket.", tickets_taken tidak berubah, input lama kembali
 - sisa 0 → pesan kuota penuh
-- nomor HP dengan 3 format berbeda dianggap sama → pendaftaran kedua ditolak
+- email Gmail dengan titik/plus berbeda tapi setara secara kanonik (mis. `budi@gmail.com` lalu `b.u.di+lain@googlemail.com`) → pendaftaran kedua ditolak
+- nomor HP sama dipakai lagi tapi dengan email berbeda → pendaftaran kedua DITERIMA (HP tidak unik)
 - ticket_qty 0 dan 5 ditolak
 - HTML form tidak pernah memuat angka sisa kuota > 4 (uji dengan sisa 3600)
 - event tertutup → halaman status

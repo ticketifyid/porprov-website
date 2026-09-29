@@ -52,7 +52,8 @@ Seeder: 35 kabupaten/kota Jawa Tengah + "Luar Jawa Tengah" (sort_order terbesar)
 | token | `string('token', 64)->unique()` | `Str::random(48)` |
 | name | `string('name', 150)` | |
 | regency_id | `unsignedSmallInteger('regency_id')` + FK ke `regencies.id` | |
-| email | `string('email', 191)` | lowercase |
+| email | `string('email', 191)` | lowercase, persis seperti diketik peserta; dipakai untuk kirim e-ticket |
+| email_canonical | `string('email_canonical', 191)` | Bentuk kanonik untuk cek duplikat, lihat `docs/arsitektur.md` |
 | phone | `string('phone', 20)` | `62xxx` |
 | ticket_qty | `unsignedTinyInteger('ticket_qty')` | 1–4 |
 | redeemed_at | `dateTime('redeemed_at')->nullable()->index()` | |
@@ -60,7 +61,7 @@ Seeder: 35 kabupaten/kota Jawa Tengah + "Luar Jawa Tengah" (sort_order terbesar)
 | ip_address | `string('ip_address', 45)->nullable()` | |
 | timestamps | `timestamps()` | |
 
-Index: `unique(['event_id','phone'])`, `unique(['event_id','email'])`, index `name` untuk pencarian manual.
+Index: `unique(['event_id','email_canonical'])`, index biasa `phone` (bukan unique — 1 nomor HP boleh dipakai lebih dari satu pendaftaran), index `name` untuk pencarian manual.
 
 ## notification_logs
 

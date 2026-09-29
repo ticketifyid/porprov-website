@@ -12,6 +12,7 @@ Kuota 3.600 tiket. Maksimal 4 tiket per pendaftaran. 1 pendaftaran = 1 QR, dituk
 - `docs/whatsapp-api.md`: kontrak API WhatsApp di VPS. BELUM dipakai; notifikasi asli dikerjakan pemilik proyek di akhir.
 - `docs/design/DESIGN.md` + `docs/design/artboards/`: desain halaman peserta. Nilai visual harus persis.
 - `docs/prompts.md`: urutan fase pengerjaan.
+- `docs/struktur.md`: struktur folder final (controller, request, action, service, view, test). Ikuti persis, jangan menyimpang tanpa bertanya.
 
 ## Stack
 
@@ -26,7 +27,7 @@ Kuota 3.600 tiket. Maksimal 4 tiket per pendaftaran. 1 pendaftaran = 1 QR, dituk
 2. **Sisa kuota tidak dikirim ke frontend.** View form hanya menerima `maxQty = max(0, min(4, sisa))`. Pesan "Sisa kuota tinggal N tiket" hanya muncul saat user mentok di batas kuota atau saat submit ditolak.
 3. **Pesan kuota:** `sisa <= 0` → "Mohon maaf, kuota pendaftaran sudah penuh." ; `qty > sisa` → "Sisa kuota tinggal {sisa} tiket. Silakan kurangi jumlah tiket." ; kembali dengan `back()->withInput()`.
 4. **`ticket_qty` divalidasi server** `integer|between:1,4`. Batas di HTML hanya UX.
-5. **Nomor HP dinormalisasi** ke `62xxx` (buang non-digit; `08` → `628`; `+62` → `62`) sebelum validasi unique dan sebelum disimpan, di SATU helper yang dipakai semua tempat.
+5. **Nomor HP dinormalisasi** ke `62xxx` (buang non-digit; `08` → `628`; `+62` → `62`) sebelum disimpan, di SATU helper yang dipakai semua tempat. Nomor HP TIDAK unik — 1 nomor boleh dipakai lebih dari satu pendaftaran.
 6. **Kode registrasi** `{events.code_prefix}-{6 karakter}`, contoh `PJT26-7K3M9Q`. Alfabet Crockford Base32 `0123456789ABCDEFGHJKMNPQRSTVWXYZ`, dari `random_int`, retry jika bentrok. Dibuat sebelum insert.
 7. **Token QR** `Str::random(48)`, unique. QR dan link tiket (`/tiket/{token}`) memakai token, BUKAN kode registrasi.
 8. **Notifikasi dikirim setelah COMMIT** lewat job queue, tidak pernah di dalam transaksi atau sinkron di request. Job HANYA memanggil interface `App\Contracts\TicketNotifier`. Implementasi WA dan email asli dikerjakan sendiri oleh pemilik proyek di akhir; sampai saat itu binding-nya `LogTicketNotifier` (`TICKET_NOTIFIER=log`). Jangan membuat implementasi WA atau email asli.
@@ -34,6 +35,11 @@ Kuota 3.600 tiket. Maksimal 4 tiket per pendaftaran. 1 pendaftaran = 1 QR, dituk
 10. **Dua mode scan:** `camera` (HP) = dua langkah, scan lalu konfirmasi. `hardware` (alat scanner mode keyboard di laptop) = sekali scan langsung tertukar. Pencarian manual = dua langkah.
 11. **Cari tiket** selalu membalas pesan netral yang sama, terdaftar atau tidak. Link hanya dikirim ke kontak terdaftar, tidak ditampilkan di layar.
 12. **Peserta tidak punya akun.** Hanya `users` dengan role `admin` / `scanner`.
+13. **Duplikat pendaftaran dicek lewat `email_canonical`, bukan `email` mentah.** Kolom `email` menyimpan email persis seperti diketik (setelah lowercase) dan dipakai untuk mengirim e-ticket. `email_canonical` dihitung oleh helper `EmailCanonicalizer` (`app/Support/`), dipakai HANYA untuk cek unique `(event_id, email_canonical)`, tidak pernah untuk mengirim notifikasi:
+    - lowercase + trim.
+    - domain `googlemail.com` diperlakukan sebagai `gmail.com`.
+    - khusus domain `gmail.com` (setelah normalisasi di atas): buang semua titik di bagian nama, dan buang bagian setelah tanda `+` (termasuk tandanya).
+    - domain lain: cukup lowercase + trim, tanpa modifikasi lain.
 
 ## Dilarang
 

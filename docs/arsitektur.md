@@ -13,7 +13,7 @@
 | Format kode | `PJT26-7K3M9Q`, prefix event + 6 karakter Crockford Base32 | Disepakati |
 | Metode scan | Kamera HP (dua langkah) dan alat scanner 2D mode keyboard (sekali scan) | Disepakati |
 | Akun peserta | Tidak ada; akses via link bertoken | Rekomendasi, konfirmasi klien |
-| Duplikat | 1 nomor HP dan 1 email = 1 pendaftaran per event | Rekomendasi, konfirmasi klien |
+| Duplikat | 1 email = 1 pendaftaran per event (`email_canonical`) | Disepakati |
 | Email | SMTP pihak ketiga, bukan mail server hosting | Rekomendasi |
 
 ## Aktor
@@ -27,7 +27,7 @@
 
 1. `GET /` dan `GET /daftar`: jika `!$event->isOpen()` → halaman status (belum dibuka / ditutup). Jika `sisa <= 0` → status kuota penuh.
 2. Form menerima `maxQty = max(0, min(4, sisa))`. Tidak ada angka sisa lain di HTML/JS.
-3. `POST /daftar` → FormRequest. Email dirakit di `prepareForValidation()`: `email = lowercase(trim(email_local) + '@' + (email_domain === 'lainnya' ? email_domain_other : email_domain))`. Aturan: `email_local` wajib, tanpa `@` dan spasi; `email_domain` harus salah satu dari daftar di `docs/design/DESIGN.md` atau `lainnya`; jika `lainnya`, `email_domain_other` wajib dan berbentuk domain valid (minimal satu titik); `email` hasil rakitan divalidasi `email:rfc`. Error ditampilkan di field email. Lalu: `ticket_qty` 1–4, normalisasi HP, unique `(event_id, phone)` dan `(event_id, email)`, Turnstile, throttle.
+3. `POST /daftar` → FormRequest. Email dirakit di `prepareForValidation()`: `email = lowercase(trim(email_local) + '@' + (email_domain === 'lainnya' ? email_domain_other : email_domain))`, lalu `email_canonical` dihitung dari `email` (aturan 13 di `CLAUDE.md`). Aturan: `email_local` wajib, tanpa `@` dan spasi; `email_domain` harus salah satu dari daftar di `docs/design/DESIGN.md` atau `lainnya`; jika `lainnya`, `email_domain_other` wajib dan berbentuk domain valid (minimal satu titik); `email` hasil rakitan divalidasi `email:rfc`. Error ditampilkan di field email. Lalu: `ticket_qty` 1–4, normalisasi HP (tanpa cek unique), unique `(event_id, email_canonical)`, Turnstile, throttle.
 4. Transaksi:
    ```php
    $event = Event::lockForUpdate()->firstOrFail();
@@ -40,7 +40,7 @@
    ```
 5. `QuotaException` → `back()->withInput()->withErrors(['ticket_qty' => $msg])`. View menghitung ulang `maxQty`; stepper memakai `min(old('ticket_qty'), maxQty)`.
 6. Setelah COMMIT: buat 2 baris `notification_logs` (email, whatsapp) status `pending`, dispatch job. Redirect `/daftar/sukses/{token}`.
-7. Unique violation dari DB (race dua submit nomor sama) ditangkap sebagai `QueryException` → pesan ramah, bukan 500.
+7. Unique violation dari DB (race dua submit `email_canonical` sama) ditangkap sebagai `QueryException` → pesan ramah, bukan 500.
 
 ## Fase 2: Notifikasi
 
@@ -69,7 +69,7 @@
 ## Fase 3: Akses tiket
 
 - `GET /tiket/{token}`: detail + QR SVG dari `token`, status penukaran. Email dan nomor ditampilkan tersamar.
-- `GET/POST /cari-tiket`: input HP atau email → normalisasi → jika terdaftar, dispatch ulang notifikasi. Respons SELALU pesan netral yang sama. Throttle ketat.
+- `GET/POST /cari-tiket`: input HP atau email → normalisasi → jika terdaftar, dispatch ulang notifikasi. Pencarian by HP bisa menemukan lebih dari satu registrasi (nomor HP tidak unik); kirim ulang notifikasi ke SEMUA registrasi yang cocok. Respons SELALU pesan netral yang sama, terlepas dari jumlah registrasi yang ditemukan (0, 1, atau banyak). Throttle ketat.
 
 ## Fase 4: Hari H (scan)
 
