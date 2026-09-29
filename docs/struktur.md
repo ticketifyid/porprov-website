@@ -9,6 +9,13 @@ Catatan penting:
 - Logika redeem WAJIB berada di `app/Actions/RedeemRegistration.php`, dipakai oleh ketiga jalur: hardware (langsung redeem), konfirmasi kamera, dan pencarian manual.
 - Helper murni (`PhoneNormalizer`, `RegistrationCodeGenerator`, `EmailCanonicalizer`) tinggal di `app/Support/`, bukan `app/Services/`.
 
+### Penyimpangan disetujui pada Fase 2
+
+- `app/Enums/UserRole.php` (folder `Enums/` baru, tidak ada di struktur awal): enum `admin`/`scanner` dengan `label()`, dipakai sebagai cast pada `User::role` dan oleh `EnsureRole`/`User::isAdmin()`/`User::isScanner()`.
+- Validasi login (`LoginController@login`) dilakukan inline lewat `$request->validate(...)`, BUKAN FormRequest terpisah — tidak ada `Requests/Auth/` supaya tidak menyimpang dari daftar `Requests/` di bawah (hanya `Public/` dan `Admin/`).
+- `tests/Feature/AuthTest.php` dan `tests/Feature/AccessControlTest.php` (tidak tercantum di daftar `tests/` awal): menguji login, throttle, akun nonaktif, dan gating role per rute.
+- Tidak ada `layouts/scanner.blade.php` terpisah: halaman `scanner/index.blade.php` memakai `layouts/admin.blade.php` yang sama dengan halaman admin (sidebar Metronic, menu disaring per role). Lihat catatan Fase 7 di bawah — ini perlu ditinjau ulang saat hasil scan harus tampil besar di layar HP.
+
 ```
 app/
   Actions/
@@ -18,6 +25,8 @@ app/
     PhoneNormalizer.php               # aturan 5 CLAUDE.md
     RegistrationCodeGenerator.php     # aturan 6 CLAUDE.md
     EmailCanonicalizer.php            # aturan 13 CLAUDE.md
+  Enums/
+    UserRole.php                      # admin / scanner, ditambahkan Fase 2 (lihat catatan di atas)
   Contracts/
     TicketNotifier.php
   Notifications/
@@ -115,6 +124,8 @@ tests/
     RegistrationCodeGeneratorTest.php
     EmailCanonicalizerTest.php
   Feature/
+    AuthTest.php                        # login, throttle, akun nonaktif — ditambahkan Fase 2
+    AccessControlTest.php               # gating role admin/scanner per rute — ditambahkan Fase 2
     RegistrationTest.php                # kuota, duplikat email_canonical, HP tidak unik, format
     NotificationJobTest.php
     TicketPageTest.php
@@ -123,6 +134,10 @@ tests/
       EventSettingsTest.php
       RegistrationAdminTest.php
 ```
+
+## Catatan untuk Fase 7 (scanner)
+
+Fase 2 memakai `layouts/admin.blade.php` (sidebar + header Metronic) apa adanya untuk `scanner/index.blade.php`, karena di fase itu halamannya masih kosong. Di Fase 7, hasil scan harus tampil **besar dan kontras** (hijau "SERAHKAN N GELANG", merah "SUDAH DITUKAR", abu "QR TIDAK DIKENAL") dan dipakai petugas dari HP di lapangan — sidebar Metronic akan memakan ruang layar dan mengganggu fokus. Saat mengerjakan Fase 7, tinjau ulang apakah `scanner/index.blade.php` perlu tampilan fokus tanpa sidebar (mis. varian `class="app-blank"` seperti `layouts/auth.blade.php`, header tipis berisi nama petugas + tombol keluar saja) alih-alih tetap mewarisi `layouts/admin.blade.php` penuh.
 
 ## Alasan pemisahan
 
