@@ -59,6 +59,16 @@ Catatan penting:
 - `routes/console.php` diisi `Schedule::command('queue:work --stop-when-empty --max-time=50')->everyMinute()->withoutOverlapping(5)` seperti `docs/hosting.md`, dengan satu tambahan: kunci `withoutOverlapping` dibatasi **5 menit**, bukan default 24 jam. Shared hosting biasa membunuh proses yang dianggap terlalu lama, dan proses yang mati tidak sempat melepas kuncinya — dengan default, satu worker yang dibunuh membuat seluruh notifikasi berhenti sampai kuncinya kedaluwarsa keesokan harinya.
 - Efek samping yang diterima: `RegistrationTest` yang tidak memakai `Queue::fake()` menjalankan job secara sinkron (`QUEUE_CONNECTION=sync` di `phpunit.xml`), jadi `LogTicketNotifier` ikut menulis ke `storage/logs/laravel.log` saat tes. Dibiarkan karena isinya bukan data rahasia dan mematikannya butuh binding khusus di tes.
 
+### Penyimpangan disetujui pada Fase 6
+
+- Package baru `chillerlan/php-qrcode:^6.0` (disetujui pemilik proyek; `php: ^8.2`, tanpa Imagick/GD). QR dirender inline sebagai SVG di `TicketController::qrSvg()` dari `token` (bukan kode registrasi, aturan 7). Di v6 output default sudah SVG; warna modul diatur lewat CSS (`.qr-frame .qr-svg .dark`), bukan `moduleValues`.
+- Masking email (`bu***@domain`) dan nomor (`0812-****-7890`) adalah method private di `TicketController`, bukan helper `Support/` baru. Halaman tiket hanya menerima string yang sudah disamarkan; email/nomor utuh tidak pernah sampai ke view.
+- `TicketController::show` mengikat model lewat `{registration:token}` (kolom `token`, tanpa mengubah `getRouteKeyName()`); token tak dikenal otomatis 404. Halaman ini mengirim `<meta name="robots" content="noindex, nofollow">`, `<meta name="referrer" content="no-referrer">`, dan header `X-Robots-Tag: noindex`. Tanggal/lokasi acara disembunyikan jika `event_starts_at`/`venue` masih null (tanpa placeholder), sama seperti Fase 4.
+- Throttle `/cari-tiket` dua lapis: (1) per IP `throttle:20,1` di rute, satu-satunya yang boleh menghasilkan 429 (CGNAT membuat banyak pengguna seluler berbagi IP); (2) per kontak ternormalisasi (`email_canonical` atau `62xxx`) maksimal 3 per jam, lewat `RateLimiter` di `TicketController@search`. Kalau batas kontak terlampaui, respons TETAP pesan netral yang sama persis; hanya dispatch yang dilewati (aturan 11).
+- Kirim ulang lewat `/cari-tiket` mereset `notification_logs` (email + whatsapp) ke `pending` lalu men-dispatch job. Reset wajib karena `SendTicketNotification` sengaja idempoten dan melewati log berstatus `sent`. Untuk pencarian by HP, SEMUA registrasi yang cocok dikirim ulang.
+- Zona waktu: `config/app.php` → `timezone` kini `env('APP_TIMEZONE', 'UTC')`, dan `APP_TIMEZONE=Asia/Jakarta` diisi di `.env` dan `.env.example`. Jam pada badge "Sudah ditukar" tampil WIB. `registration_open_at`/`close_at`/`event_starts_at` disimpan dan dibaca dalam zona yang sama (kolom DATETIME MySQL tanpa info zona), jadi **data jadwal yang sudah tersimpan sebelum perubahan ini (diisi dalam UTC) bergeser 7 jam** dan harus diisi ulang lewat halaman admin. Seluruh tes lulus dengan zona WIB, termasuk logika jadwal pendaftaran Fase 4.
+- `public/css/app.css` menambah bagian "Fase 6" (halaman tiket berlatar navy, cari tiket, utilitas `u-*-only-inline`). Semua nilai dikutip dari artboard `Tiket`, `DesktopTiket`, `LupaTiket`, `DesktopLupaTiket`.
+
 ```
 app/
   Actions/
