@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use PDOException;
 use Tests\TestCase;
@@ -23,6 +24,9 @@ class RegistrationTest extends TestCase
     private Event $event;
 
     private Regency $regency;
+
+    /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
+    private array $turnstileLogs = [];
 
     protected function setUp(): void
     {
@@ -37,6 +41,10 @@ class RegistrationTest extends TestCase
         ]);
 
         $this->regency = Regency::create(['name' => 'Kota Semarang', 'sort_order' => 1]);
+
+        Log::listen(function ($event): void {
+            $this->turnstileLogs[] = ['level' => $event->level, 'message' => $event->message, 'context' => $event->context];
+        });
     }
 
     /**
@@ -54,6 +62,28 @@ class RegistrationTest extends TestCase
             'phone' => '081234567890',
             'ticket_qty' => 2,
         ], $overrides);
+    }
+
+    /**
+     * Penyebab kegagalan Turnstile hanya dibedakan di log (pesan ke pengguna
+     * sama). Token widget dan secret tidak boleh ikut tertulis.
+     *
+     * @param  list<string>|null  $errorCodes
+     */
+    private function assertTurnstileLogged(string $reason, ?array $errorCodes = null): void
+    {
+        $entries = collect($this->turnstileLogs)->where('level', 'warning')
+            ->filter(fn (array $entry) => ($entry['context']['reason'] ?? null) === $reason);
+
+        $this->assertCount(1, $entries);
+
+        if ($errorCodes !== null) {
+            $this->assertSame($errorCodes, $entries->first()['context']['error_codes']);
+        }
+
+        $written = json_encode($this->turnstileLogs);
+        $this->assertStringNotContainsString('token-widget', $written);
+        $this->assertStringNotContainsString('rahasia', $written);
     }
 
     private function setRemainingQuota(int $remaining): void
@@ -296,6 +326,28 @@ class RegistrationTest extends TestCase
 
         $this->assertSame(0, Registration::count());
         $this->assertSame(0, $this->event->fresh()->tickets_taken);
+        $this->assertTurnstileLogged('connection');
+    }
+
+    public function test_token_turnstile_ditolak_memakai_pesan_yang_sama_dengan_koneksi_gagal(): void
+    {
+        config(['services.turnstile.enabled' => true, 'services.turnstile.secret_key' => 'rahasia']);
+
+        Http::fake(['challenges.cloudflare.com/*' => Http::response([
+            'success' => false,
+            'error-codes' => ['invalid-input-response'],
+        ])]);
+
+        $response = $this->post('/daftar', $this->payload(['cf-turnstile-response' => 'token-widget']));
+
+        $response->assertRedirect('/daftar');
+        $response->assertSessionHasErrors([
+            'cf-turnstile-response' => 'Verifikasi keamanan gagal, silakan coba lagi.',
+        ]);
+        $response->assertSessionHasInput('name', 'Budi Santoso');
+
+        $this->assertSame(0, Registration::count());
+        $this->assertTurnstileLogged('rejected', ['invalid-input-response']);
     }
 
     public function test_turnstile_sukses_meneruskan_pendaftaran(): void

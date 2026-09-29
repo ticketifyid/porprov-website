@@ -1,6 +1,6 @@
 # Notifikasi e-ticket
 
-Dokumen ini untuk orang yang akan membuat implementasi pengiriman asli (Fase 10 di `docs/prompts.md`): email lewat SMTP dan WhatsApp lewat VPS. Semua titik sambungnya sudah ada; yang belum ada hanya kelas yang benar-benar mengirim.
+Dokumen ini untuk orang yang mengurus pengiriman asli (Fase 10 di `docs/prompts.md`): email lewat SMTP dan WhatsApp lewat VPS. **Email sudah diimplementasikan** (`TICKET_NOTIFIER=mail`, lihat di bawah). WhatsApp belum: sampai ada, pesan WA hanya ditulis ke log.
 
 ## Alur
 
@@ -48,10 +48,31 @@ Catatan: kirim e-ticket ke kolom `email`, **bukan** `email_canonical`. `email_ca
 | Nilai `TICKET_NOTIFIER` | Kelas | Perilaku |
 |---|---|---|
 | `log` (default) | `App\Services\Notifications\LogTicketNotifier` | Tidak mengirim apa pun. Menulis satu baris `Log::info` per notifikasi dan mengembalikan id `log-{uuid}`. |
+| `mail` (produksi) | `App\Services\Notifications\MailTicketNotifier` | **Email:** Mailable `App\Mail\TicketMail` dikirim langsung (`Mail::to(...)->send(...)`, bukan queue, karena sudah berjalan di dalam job) ke kolom `email`, lewat mailer default (`MAIL_MAILER`). Mengembalikan Message-ID sebagai `provider_message_id`. Exception transport tidak ditangkap, jadi job mencatat gagal dan queue melakukan retry. **WhatsApp:** diteruskan ke `LogTicketNotifier` (di-inject lewat constructor) sampai implementasi WA dibuat. |
 
 Nilai lain sengaja **melempar `InvalidArgumentException`** saat resolve, bukan diam-diam jatuh ke `log`. Salah ketik di produksi harus langsung terlihat, bukan berakhir "semua tercatat sent tapi tidak ada yang menerima".
 
+### Email e-ticket (`TicketMail`)
+
+- Subjek: `E-ticket Opening Ceremony Porprov Jateng XVII 2026 - {kode}`.
+- View HTML `resources/views/mail/ticket.blade.php` (CSS inline, navy `#0E2A6B` dan token lain dari `docs/design/DESIGN.md`, tanpa gambar eksternal) dan teks polos `resources/views/mail/ticket-text.blade.php`.
+- Isi: sapaan nama, kode registrasi, "{N} tiket, tukar dengan {N} gelang", tanggal & lokasi acara (masing-masing disembunyikan jika `event_starts_at`/`venue` null), tombol + link `/tiket/{token}`, dan petunjuk menunjukkan QR saat registrasi ulang.
+- Link dibuat dengan `route('tiket.show', $token)`. Di worker tidak ada request, jadi host-nya diambil dari `APP_URL` — nilai itu harus `https://DOMAIN` produksi.
+
+### Konfigurasi mail
+
+| Variabel | Keterangan |
+|---|---|
+| `MAIL_MAILER` | `smtp` di produksi (`log` di lokal). |
+| `MAIL_HOST` / `MAIL_PORT` | Dari penyedia mailbox. |
+| `MAIL_SCHEME` | Laravel versi ini memakai `MAIL_SCHEME`, **bukan** `MAIL_ENCRYPTION`. `smtps` untuk port 465, `smtp` untuk 587 (STARTTLS otomatis). Kosong/`null` = ditebak dari port. |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | Kredensial mailbox, hanya di `.env`. |
+| `MAIL_FROM_ADDRESS` / `MAIL_FROM_NAME` | Alamat di domain yang SPF/DKIM-nya sudah benar (lihat `docs/deploy.md`). |
+| `MAIL_TIMEOUT` | Default 10 detik (`config/mail.php`). Supaya server SMTP yang menggantung tidak menghabiskan jatah 50 detik worker. |
+
 ## Menambah implementasi baru
+
+Untuk WhatsApp: cukup ganti delegasi `sendWhatsApp()` di `MailTicketNotifier` (atau buat kelas gabungan seperti di bawah); binding `mail` tidak perlu diubah namanya kalau Anda tidak mau.
 
 1. Buat kelas di `app/Services/Notifications/`, mis. `SmtpTicketNotifier.php`, `implements App\Contracts\TicketNotifier`. Implementasi asli Fase 10 (SMTP maupun WhatsApp) ditaruh di folder yang sama, **bukan** di `app/Notifications/` — folder itu tidak dipakai proyek ini supaya tidak tertukar dengan Notification bawaan Laravel.
 2. Tambah satu arm di `match` pada `AppServiceProvider::register()`:
@@ -90,9 +111,24 @@ Kolom `notification_logs` yang diurus job:
 |---|---|
 | `status` | `pending` (awal) → `sent` (berhasil) / `failed` (setelah percobaan ke-3) |
 | `attempts` | naik 1 setiap kali pengiriman melempar exception |
-| `last_error` | pesan exception (kelas + pesan, dipotong 1000 karakter); dikosongkan lagi kalau retry berhasil |
+| `last_error` | nama kelas exception + pesan yang **sudah disaring**, maksimal 500 karakter; dikosongkan lagi kalau retry berhasil. Lihat "Penyaringan `last_error`" di bawah. |
 | `sent_at` | waktu berhasil |
 | `provider_message_id` | nilai balik dari notifier |
+
+### Penyaringan `last_error`
+
+Exception SMTP/HTTP bisa memuat kredensial, alamat email, nomor HP, atau token tiket. `SendTicketNotification::errorMessage()` (dipakai `handle()` dan `failed()`) menyaring pesan sebelum disimpan:
+
+| Pola | Diganti menjadi |
+|---|---|
+| kredensial di URL (`smtp://user:pass@host`) | `smtp://[disaring]@host` |
+| `Authorization: ...`, `Bearer ...`, `Basic ...` | `[disaring]` |
+| `password=`, `token:`, `api_key=`, `secret=`, `user=`, `username "..."`, dst. | `password=[disaring]`, `username "[disaring]"` |
+| alamat email | `[email]` |
+| nomor telepon (≥ 9 digit) | `[nomor]` |
+| string alfanumerik ≥ 32 karakter (token tiket, API key) | `[token]` |
+
+Host, port, dan kode balasan SMTP (mis. `535 5.7.8`) tetap ada supaya penyebab kegagalan masih bisa dibaca. Implementasi baru tidak perlu menyaring sendiri, tapi sebaiknya tidak sengaja memasukkan data peserta ke pesan exception.
 
 Perilaku job yang perlu diketahui:
 
@@ -112,7 +148,7 @@ $this->app->instance(TicketNotifier::class, $fake);
 
 Tes untuk implementasi asli berdiri sendiri dan tidak menyentuh job:
 
-- SMTP: `Mail::fake()`, assert Mailable terkirim ke `$registration->email` dengan kode dan link tiket yang benar.
+- SMTP: `Mail::fake()`, assert Mailable terkirim ke `$registration->email` dengan kode dan link tiket yang benar. Sudah ada di `tests/Feature/MailTicketNotifierTest.php` (termasuk tanggal/lokasi null, WA tetap log, dan penyaringan `last_error`).
 - WhatsApp: `Http::fake()`, assert request ke endpoint VPS sesuai `docs/whatsapp-api.md`, dan assert **exception dilempar** saat respons 4xx/5xx atau timeout (ini bagian kontrak yang paling mudah terlewat).
 
 ## Memeriksa di produksi
@@ -126,4 +162,4 @@ WHERE n.status = 'failed' ORDER BY n.updated_at DESC;
 
 Antrean menumpuk (`SELECT COUNT(*) FROM jobs`) biasanya berarti cron tidak jalan atau worker mati sebelum selesai. Job yang menyerah tercatat juga di tabel `failed_jobs` (`php artisan queue:failed`, ulangi dengan `php artisan queue:retry`).
 
-Sebelum go-live, pastikan `TICKET_NOTIFIER` di `.env` produksi **bukan** `log` (masuk checklist H-1 di `docs/deploy.md`, Fase 9).
+Sebelum go-live, pastikan `TICKET_NOTIFIER=mail` di `.env` produksi, bukan `log` (masuk checklist H-1 di `docs/deploy.md`). Periksa juga SPF/DKIM/DMARC domain pengirim dan batas kirim harian mailbox (`docs/deploy.md`, "Email pengirim").

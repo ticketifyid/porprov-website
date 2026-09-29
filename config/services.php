@@ -41,8 +41,9 @@ return [
 
     /*
      * Implementasi App\Contracts\TicketNotifier yang dipakai job notifikasi.
-     * Saat ini hanya 'log' (App\Notifications\LogTicketNotifier) yang tersedia;
-     * nilai lain baru ada setelah implementasi asli dibuat (docs/notifikasi.md).
+     * 'log'  → App\Services\Notifications\LogTicketNotifier (tidak mengirim apa pun)
+     * 'mail' → App\Services\Notifications\MailTicketNotifier (email asli; WA
+     *          sementara masih log). Lihat docs/notifikasi.md.
      * Nilai yang tidak dikenal sengaja melempar exception di AppServiceProvider.
      */
     'ticket_notifier' => env('TICKET_NOTIFIER', 'log'),

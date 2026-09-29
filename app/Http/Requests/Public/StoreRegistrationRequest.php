@@ -9,6 +9,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class StoreRegistrationRequest extends FormRequest
@@ -19,6 +20,11 @@ class StoreRegistrationRequest extends FormRequest
      * @var list<string>
      */
     public const DOMAINS = ['gmail.com', 'yahoo.com', 'yahoo.co.id', 'outlook.com', 'icloud.com'];
+
+    /**
+     * Pesan tunggal untuk Turnstile gagal (koneksi gagal maupun token ditolak).
+     */
+    private const TURNSTILE_FAILED = 'Verifikasi keamanan gagal, silakan coba lagi.';
 
     public function authorize(): bool
     {
@@ -191,14 +197,28 @@ class StoreRegistrationRequest extends FormRequest
                     'response' => $token,
                     'remoteip' => $this->ip(),
                 ]);
-        } catch (ConnectionException) {
-            $validator->errors()->add('cf-turnstile-response', 'Verifikasi keamanan gagal, silakan coba lagi.');
+        } catch (ConnectionException $e) {
+            Log::warning('Turnstile tidak terjangkau', [
+                'reason' => 'connection',
+                'exception' => $e::class,
+                'message' => mb_substr($e->getMessage(), 0, 300),
+            ]);
+
+            $validator->errors()->add('cf-turnstile-response', self::TURNSTILE_FAILED);
 
             return;
         }
 
+        // Pesan ke pengguna sama untuk koneksi gagal dan token ditolak;
+        // penyebabnya hanya dibedakan di log. Token dan secret tidak ditulis.
         if (! $response->successful() || $response->json('success') !== true) {
-            $validator->errors()->add('cf-turnstile-response', 'Verifikasi keamanan gagal. Coba lagi.');
+            Log::warning('Turnstile menolak token', [
+                'reason' => 'rejected',
+                'status' => $response->status(),
+                'error_codes' => (array) $response->json('error-codes', []),
+            ]);
+
+            $validator->errors()->add('cf-turnstile-response', self::TURNSTILE_FAILED);
         }
     }
 }

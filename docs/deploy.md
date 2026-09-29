@@ -87,7 +87,7 @@ belum selesai kalau ada satu baris yang tidak sesuai:
 | `APP_TIMEZONE` | `Asia/Jakarta` | Jadwal acara, jam penukaran gelang, dan badge "Sudah ditukar" dibaca/ditulis dalam WIB (`docs/struktur.md` Fase 6). Salah zona = jam di tiket meleset 7 jam. |
 | `APP_KEY` | hasil `php artisan key:generate` | Kunci enkripsi sesi & cookie. Jangan pakai kunci yang sama dengan lokal. |
 | `SESSION_SECURE_COOKIE` | `true` | Cookie sesi petugas hanya dikirim lewat HTTPS. Tanpa ini, satu request `http://` yang lolos bisa membocorkan sesi admin di Wi-Fi venue. |
-| `TICKET_NOTIFIER` | **bukan `log`** | `log` hanya menulis ke `storage/logs` dan tidak mengirim apa pun. Peserta tidak akan menerima e-ticket. Lihat `docs/notifikasi.md` dan Fase 10. |
+| `TICKET_NOTIFIER` | **`mail`** | Email e-ticket asli (WhatsApp masih log sampai diimplementasikan). `log` hanya menulis ke `storage/logs` dan tidak mengirim apa pun: peserta tidak akan menerima e-ticket. Lihat `docs/notifikasi.md`. |
 | `DB_*` | kredensial produksi | — |
 | `QUEUE_CONNECTION` | `database` | Notifikasi dikirim lewat antrean, dijalankan cron (langkah 7). |
 | `SESSION_DRIVER` | `database` | Shared hosting bisa membersihkan `storage/framework/sessions` kapan saja. |
@@ -96,7 +96,11 @@ belum selesai kalau ada satu baris yang tidak sesuai:
 | `TURNSTILE_ENABLED` | `true` | Proteksi bot pada form pendaftaran publik. |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | dari dashboard Cloudflare | Secret key hanya di `.env`. |
 | `LOG_LEVEL` | `warning` (atau `error`) | `debug` di produksi menumpuk log besar di kuota disk shared hosting. |
-| `MAIL_*` | SMTP pihak ketiga | Baru relevan setelah Fase 10; kredensial hanya di `.env`. |
+| `MAIL_MAILER` | `smtp` | `log` di produksi = email tidak pernah keluar meski `TICKET_NOTIFIER=mail`. |
+| `MAIL_HOST` / `MAIL_PORT` / `MAIL_SCHEME` | dari penyedia mailbox | `MAIL_SCHEME=smtps` untuk port 465, `smtp` untuk 587. Laravel versi ini tidak membaca `MAIL_ENCRYPTION`. |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | kredensial mailbox | Hanya di `.env`. |
+| `MAIL_FROM_ADDRESS` / `MAIL_FROM_NAME` | alamat di domain sendiri | Domainnya harus lolos SPF/DKIM/DMARC (lihat "Email pengirim" di bawah), kalau tidak e-ticket masuk spam. |
+| `MAIL_TIMEOUT` | `10` | Detik. Server SMTP yang menggantung tidak boleh menghabiskan jatah 50 detik worker. |
 
 Cek cepat setelah mengisi:
 
@@ -105,6 +109,27 @@ php artisan about --only=environment
 ```
 
 Pastikan `Environment = production`, `Debug Mode = OFF`, `Timezone = Asia/Jakarta`.
+
+### Email pengirim
+
+Dicek sebelum pendaftaran dibuka, bukan pada hari H:
+
+1. **SPF**: record TXT domain pengirim memuat server/penyedia SMTP yang dipakai
+   (`dig TXT DOMAIN` atau cek di panel DNS). Hanya boleh ada **satu** record `v=spf1`.
+2. **DKIM**: aktifkan di panel hosting/penyedia SMTP, lalu pasang record TXT
+   `selector._domainkey.DOMAIN` yang diberikan.
+3. **DMARC**: record TXT `_dmarc.DOMAIN`, minimal `v=DMARC1; p=none; rua=mailto:...`
+   untuk awal.
+4. Kirim satu email uji ke <https://www.mail-tester.com> (daftarkan peserta uji dengan
+   alamat dari situs itu) dan pastikan SPF, DKIM, DMARC lolos. Cek juga email uji yang
+   masuk ke Gmail: buka "Tampilkan yang asli" → ketiganya harus `PASS`.
+5. **Batas kirim mailbox**: tanyakan ke penyedia batas kirim per jam dan per hari.
+   Kuota 3.600 tiket bisa berarti sampai 3.600 pendaftaran (1 tiket per pendaftaran),
+   ditambah kirim ulang dari `/cari-tiket` dan admin. Shared hosting sering membatasi
+   100–500 email/jam; kalau batasnya lebih kecil dari lonjakan pendaftar di jam pertama,
+   email di atas batas akan gagal dan dicoba ulang (maks. 3 kali, ~6 menit total) lalu
+   berstatus `failed`. Pakai layanan SMTP pihak ketiga yang batasnya cukup, atau siapkan
+   kirim ulang manual dari admin.
 
 ## 5. Migrasi & akun admin
 
@@ -377,14 +402,20 @@ Dikerjakan sehari sebelum acara, bersama panitia.
 
 ### Konfigurasi
 
-- [ ] `TICKET_NOTIFIER` **bukan** `log` — kalau masih `log`, tidak ada peserta yang
-      menerima e-ticket. Uji dengan tombol "Kirim ulang" di satu registrasi dan pastikan
-      pesannya benar-benar masuk.
+- [ ] `TICKET_NOTIFIER=mail` (bukan `log`) dan `MAIL_MAILER=smtp` — kalau masih `log`,
+      tidak ada peserta yang menerima e-ticket. Uji dengan tombol "Kirim ulang" di satu
+      registrasi dan pastikan emailnya benar-benar masuk (kotak masuk, bukan spam) dan
+      link-nya `https://DOMAIN/tiket/...`.
+- [ ] SPF, DKIM, DMARC domain pengirim lolos (langkah 4, "Email pengirim").
+- [ ] Batas kirim harian/per jam mailbox sudah dicek dan cukup untuk sisa pendaftar +
+      kirim ulang.
 - [ ] `APP_DEBUG=false`, `APP_ENV=production`, `SESSION_SECURE_COOKIE=true`.
 - [ ] `php artisan config:cache` sudah dijalankan setelah perubahan `.env` terakhir.
 - [ ] `notification_logs` tidak menumpuk status `pending` atau `failed`
       (cek `/admin/registrations` → detail peserta). Kalau banyak `failed`, periksa
-      kredensial SMTP/WA sebelum hari H, bukan pada hari H.
+      kredensial SMTP/WA sebelum hari H, bukan pada hari H. `last_error` sudah disaring
+      (email/nomor/kredensial diganti `[email]`/`[nomor]`/`[disaring]`), jadi aman dibaca
+      tapi tidak memuat alamat tujuan — cocokkan lewat kode registrasi.
 - [ ] Antrean `jobs` kosong dan `failed_jobs` kosong.
 - [ ] Cron `schedule:run` masih aktif (daftar peserta uji baru, pastikan `sent` < 2 menit).
 

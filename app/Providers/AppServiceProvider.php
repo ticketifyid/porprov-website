@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\TicketNotifier;
 use App\Services\Notifications\LogTicketNotifier;
+use App\Services\Notifications\MailTicketNotifier;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -27,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
 
             return match ($driver) {
                 'log' => new LogTicketNotifier,
+                'mail' => $this->app->make(MailTicketNotifier::class),
                 default => throw new InvalidArgumentException(
                     "Implementasi TicketNotifier '{$driver}' tidak dikenal. Lihat docs/notifikasi.md.",
                 ),

@@ -108,11 +108,41 @@ class SendTicketNotification implements ShouldQueue
     }
 
     /**
-     * Kolomnya text, tapi jejak exception bisa sangat panjang; simpan secukupnya
-     * untuk dibaca admin di halaman detail peserta.
+     * Pesan untuk notification_logs.last_error, dibaca admin di halaman detail
+     * peserta. Exception SMTP/HTTP bisa memuat kredensial, alamat email, nomor
+     * HP, atau token tiket, jadi pesannya disaring dulu (docs/notifikasi.md),
+     * lalu dipotong 500 karakter.
      */
     private function errorMessage(Throwable $e): string
     {
-        return mb_substr($e::class.': '.$e->getMessage(), 0, 1000);
+        $message = preg_replace(
+            [
+                // smtp://user:pass@host → smtp://[disaring]@host
+                '~(\b[a-z][a-z0-9+.\-]*://)[^\s/@]+@~i',
+                '~\bAuthorization\s*[:=]\s*(?:(?:Bearer|Basic)\s+)?[^\s"\',;]+~i',
+                '~\b(Bearer|Basic)\s+[^\s"\',;]+~i',
+                // password=..., token: ...
+                '~\b(password|passwd|pwd|pass|secret|token|api[_-]?key|apikey|access[_-]?key|key|username|user)\s*[=:]\s*("[^"]*"|\'[^\']*\'|[^\s&"\',;]+)~i',
+                // with username "..." (pesan autentikasi Symfony Mailer)
+                '~\b(password|username|user)\s+("[^"]*"|\'[^\']*\')~i',
+                '~[a-z0-9._%+\-]+@[a-z0-9\-]+(?:\.[a-z0-9\-]+)+~i',
+                // token tiket (48 karakter), API key, dsb.
+                '~\b[A-Za-z0-9_\-]{32,}\b~',
+                '~(?<![\w\[])\+?\d(?:[\s\-.()]*\d){8,}~',
+            ],
+            [
+                '$1[disaring]@',
+                'Authorization: [disaring]',
+                '$1 [disaring]',
+                '$1=[disaring]',
+                '$1 "[disaring]"',
+                '[email]',
+                '[token]',
+                '[nomor]',
+            ],
+            $e->getMessage(),
+        );
+
+        return mb_substr($e::class.': '.($message ?? '[pesan tidak bisa dibaca]'), 0, 500);
     }
 }

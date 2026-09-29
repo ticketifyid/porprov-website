@@ -156,6 +156,26 @@ Catatan penting:
   dokumen acuan di `CLAUDE.md`). Seluruh isi "Catatan untuk Fase 9" di bawah sudah pindah
   ke `docs/deploy.md` bagian 8; catatan aslinya disimpan sebagai riwayat.
 
+### Penyimpangan disetujui pada Fase 10 (bagian email)
+
+- **`app/Services/Notifications/MailTicketNotifier.php`** (`TICKET_NOTIFIER=mail`):
+  email lewat `Mail::to(...)->send(...)` langsung (bukan queue, sudah di dalam job),
+  mengembalikan Message-ID; `sendWhatsApp()` diteruskan ke `LogTicketNotifier` yang
+  di-inject lewat constructor sampai WA dibuat.
+- **`app/Mail/TicketMail.php`** (folder `Mail/` baru, bawaan Laravel untuk Mailable) dan
+  **`resources/views/mail/`** (`ticket.blade.php` HTML ber-CSS inline, `ticket-text.blade.php`
+  teks polos). Warna email memakai token `docs/design/DESIGN.md` secara inline, karena
+  klien email tidak memuat `public/css/app.css`.
+- **Sanitasi `last_error`** di `SendTicketNotification::errorMessage()` (satu-satunya
+  perubahan di job, menjawab "Catatan untuk Fase 10" di bawah): kelas exception + pesan
+  yang sudah disaring dari kredensial, email, nomor telepon, dan token; maksimal
+  **500** karakter (sebelumnya 1000). Ditaruh di job, bukan helper `Support/` baru,
+  karena hanya dipakai di situ.
+- **`config/mail.php`**: `smtp.timeout` = `env('MAIL_TIMEOUT', 10)`. `.env.example`
+  menambah `MAIL_TIMEOUT` dan catatan `MAIL_SCHEME` (Laravel versi ini tidak memakai
+  `MAIL_ENCRYPTION`).
+- **`tests/Feature/MailTicketNotifierTest.php`** (baru). Tes lama tidak diubah.
+
 ```
 app/
   Actions/
@@ -177,6 +197,9 @@ app/
   Services/
     Notifications/
       LogTicketNotifier.php           # implementasi default (TICKET_NOTIFIER=log)
+      MailTicketNotifier.php          # TICKET_NOTIFIER=mail: email asli, WA masih log (Fase 10)
+  Mail/
+    TicketMail.php                    # Mailable e-ticket (Fase 10)
   Http/
     Controllers/
       Public/
@@ -249,6 +272,9 @@ resources/
       _styleguide.blade.php             # APP_ENV=local only
     scanner/
       index.blade.php
+    mail/
+      ticket.blade.php                  # email e-ticket HTML, CSS inline (Fase 10)
+      ticket-text.blade.php             # versi teks polos
     admin/
       dashboard.blade.php
       events/
@@ -295,6 +321,7 @@ tests/
     LogTicketNotifierTest.php           # log tanpa email/nomor utuh/token — ditambahkan review Fase 9
     RegistrationTest.php                # kuota, duplikat email_canonical, HP tidak unik, format
     NotificationJobTest.php
+    MailTicketNotifierTest.php          # email asli + sanitasi last_error — ditambahkan Fase 10
     TicketPageTest.php
     ScanTest.php
     Admin/
@@ -321,7 +348,7 @@ Diterapkan setelah review Fase 9; tiap poin punya tes.
 Tiga perbaikan prioritas yang menyusul:
 
 - **`LogTicketNotifier` tidak lagi menulis email utuh, nomor HP utuh, nama, maupun `ticket_url` bertoken ke log.** Konteks log kini hanya `channel`, `registration_id`, `code`, dan `destination` tersamar (`bu***@gmail.com`, `0812-****-7890`). Siapa pun yang bisa membaca `storage/logs` sebelumnya bisa membuka tiket peserta. Masking dipindah dari method private `TicketController` (catatan Fase 6) ke helper baru **`app/Support/ContactMasker.php`** supaya halaman tiket dan log memakai format yang sama; perilaku halaman tiket tidak berubah. Tes: `tests/Feature/LogTicketNotifierTest.php` (baru).
-- **Turnstile di `StoreRegistrationRequest`**: `ConnectionException` (Cloudflare tidak terjangkau, termasuk timeout cURL 28) ditangkap dan menjadi error validasi `cf-turnstile-response` "Verifikasi keamanan gagal, silakan coba lagi." dengan `back()->withInput()`, bukan 500. `timeout` dan `connectTimeout` diturunkan ke **5 detik** (sebelumnya 10). Pesan untuk verifikasi yang ditolak Cloudflare ("Verifikasi keamanan gagal. Coba lagi.") tidak diubah. Tes: dua tes baru di `RegistrationTest.php` (`Http::fake` yang melempar `ConnectionException`, dan jalur sukses).
+- **Turnstile di `StoreRegistrationRequest`**: `ConnectionException` (Cloudflare tidak terjangkau, termasuk timeout cURL 28) ditangkap dan menjadi error validasi `cf-turnstile-response` "Verifikasi keamanan gagal, silakan coba lagi." dengan `back()->withInput()`, bukan 500. `timeout` dan `connectTimeout` diturunkan ke **5 detik** (sebelumnya 10). Token yang ditolak Cloudflare kini memakai pesan yang **sama** (sebelumnya "Verifikasi keamanan gagal. Coba lagi."); penyebabnya hanya dibedakan di log `warning` (`reason` = `connection` beserta kelas + pesan exception, atau `rejected` beserta status HTTP + `error-codes`), tanpa token maupun secret. Token kosong tetap "Verifikasi keamanan belum selesai. Coba lagi.". Tes: tiga tes baru di `RegistrationTest.php` (`Http::fake` yang melempar `ConnectionException`, token ditolak, dan jalur sukses), termasuk cek isi log.
 - **Pengaman `APP_DEBUG` di produksi**: `AppServiceProvider::boot()` → `refuseDebugInProduction()`. Bila `APP_ENV=production` dan `APP_DEBUG=true`, request web ditolak dengan `RuntimeException` berpesan jelas ("Konfigurasi tidak aman: APP_DEBUG=true tidak boleh dipakai saat APP_ENV=production …") yang tercatat di `storage/logs`. Sebelum melempar, `app.debug` dimatikan dulu supaya pengunjung melihat halaman 500 biasa, bukan halaman debug. Hanya berlaku di `production`; `local` (termasuk lewat Cloudflare Tunnel `*.trycloudflare.com`) dan `testing` tidak tersentuh. **Artisan/cron sengaja tidak diblokir**, supaya `php artisan config:clear` tetap bisa dipakai jika `config:cache` terlanjur berisi `debug=true` (di hosting tanpa SSH: hapus `bootstrap/cache/config.php`). Tes: `tests/Feature/ProductionDebugGuardTest.php` (baru).
 
 ### Risiko yang diterima (keputusan pemilik proyek)
@@ -331,7 +358,9 @@ Tiga perbaikan prioritas yang menyusul:
 - **Celah timing di `/cari-tiket`**: respons selalu netral, tapi waktu respons untuk kontak terdaftar (mengantre resend) bisa sedikit lebih lama daripada yang tidak terdaftar. Diterima; throttle per-IP dan per-kontak membatasi penyalahgunaannya.
 - **Race pada cek "admin aktif terakhir"** di `UserController::update`: dua admin yang saling menonaktifkan pada saat bersamaan bisa sama-sama lolos cek dan meninggalkan nol admin aktif. Diterima (jumlah admin kecil); pemulihannya lewat `tinker` (jika ada SSH) atau `UPDATE` di phpMyAdmin (lihat `docs/deploy.md`, "Pemulihan admin"). `AdminUserSeeder` tidak bisa dipakai memulihkan karena kini `firstOrCreate` dan tidak mengubah akun yang sudah ada.
 
-### Catatan untuk Fase 10 (notifikasi asli)
+### Catatan untuk Fase 10 (notifikasi asli) — SUDAH DIJAWAB
+
+Lihat "Penyimpangan disetujui pada Fase 10" di atas dan `docs/notifikasi.md` ("Penyaringan `last_error`"). Catatan aslinya disimpan sebagai riwayat.
 
 - Pesan exception yang disimpan di `notification_logs.last_error` (lewat `SendTicketNotification::errorMessage`) **harus dibersihkan dari data sensitif** sebelum implementasi WA/email asli dipakai: exception HTTP/SMTP bisa memuat URL beserta API key, header `Authorization`, nomor HP, alamat email, atau token tiket. Buang atau samarkan semuanya dan batasi panjangnya sebelum ditulis ke kolom itu.
 
