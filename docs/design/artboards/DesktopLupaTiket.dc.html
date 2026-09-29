@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Cari tiket saya (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#EEF3FB;color:#0B1B3F}
+a{color:#1F5FD6}a:hover{color:#123F9E}
+</style>
+</helmet>
+<div style="width: 1280px; height: 820px; box-sizing: border-box; background: #EEF3FB; display: flex; flex-direction: column; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1B3F">
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: 6px">
+    <div style="background: #179C52"></div><div style="background: #F2B705"></div><div style="background: #D93A2B"></div><div style="background: #1F5FD6"></div>
+  </div>
+  <div style="height: 84px; padding: 0 80px; background: #FFFFFF; display: flex; align-items: center; justify-content: space-between">
+    <a href="DesktopMain.dc.html" aria-label="Kembali ke beranda"><img src="/_blob/f962f20b004c3754fbb4c86a779ac88d" alt="Logo Porprov Jawa Tengah XVII 2026" style="width: 112px; height: auto; display: block"></a>
+    <a href="DesktopForm.dc.html" style="display: flex; align-items: center; height: 44px; padding: 0 22px; border-radius: 12px; background: #0E2A6B; color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none">Daftar</a>
+  </div>
+
+  <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 40px">
+    <div style="width: 560px; background: #FFFFFF; border-radius: 28px; padding: 44px 48px; display: flex; flex-direction: column; gap: 22px">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h1 style="margin: 0; font-size: 32px; font-weight: 800; color: #0E2A6B">Cari tiket saya</h1>
+        <p style="margin: 0; font-size: 16px; line-height: 1.55; color: #4B5A7A">Masukkan nomor WhatsApp atau email yang dipakai saat mendaftar. Link e-ticket akan dikirim ulang ke kontak tersebut.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="d-kontak" style="font-size: 14px; font-weight: 700">Nomor WhatsApp atau email</label>
+        <input id="d-kontak" type="text" placeholder="08xxxxxxxxxx atau nama@email.com" style="height: 52px; box-sizing: border-box; padding: 0 14px; border: 1.5px solid #C5D0E3; border-radius: 12px; font-size: 16px; font-family: inherit; color: #0B1B3F; background: #FFFFFF">
+      </div>
+      <button type="button" onClick="{{send}}" style="height: 56px; border: none; border-radius: 14px; background: #0E2A6B; color: #FFFFFF; font-size: 17px; font-weight: 700; font-family: inherit; cursor: pointer">Kirim ulang link tiket</button>
+      <sc-if value="{{sent}}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="display: flex; gap: 10px; padding: 14px 16px; border-radius: 12px; background: #E6EEFC; color: #123F9E; font-size: 15px; line-height: 1.5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#123F9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 2px"><path d="M4 4h16v16H4z"></path><path d="M4 6l8 7 8-7"></path></svg>
+          <div>Jika data terdaftar, link e-ticket sudah dikirim ulang ke email dan WhatsApp Anda. Cek juga folder spam.</div>
+        </div>
+      </sc-if>
+      <div style="font-size: 14px; line-height: 1.5; color: #4B5A7A">Tidak menerima apa pun setelah beberapa menit? Datang ke meja bantuan di lokasi dengan menunjukkan KTP; petugas bisa mencari data Anda.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":820}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sent: false };
+  }
+  renderVals() {
+    return {
+      sent: this.state.sent,
+      send: () => this.setState({ sent: true })
+    };
+  }
+}
+</script>
+</body>
+</html>

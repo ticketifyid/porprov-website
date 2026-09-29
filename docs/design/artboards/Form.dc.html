@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Form pendaftaran</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#EEF3FB;color:#0B1B3F}
+a{color:#1F5FD6}a:hover{color:#123F9E}
+</style>
+</helmet>
+<div style="width: 390px; height: 1240px; box-sizing: border-box; background: #EEF3FB; display: flex; flex-direction: column; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1B3F">
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: 6px">
+    <div style="background: #179C52"></div><div style="background: #F2B705"></div><div style="background: #D93A2B"></div><div style="background: #1F5FD6"></div>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 4px">
+    <a href="Main.dc.html" style="display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 8px; font-size: 15px; font-weight: 600; text-decoration: none; color: #0E2A6B">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E2A6B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+      Kembali
+    </a>
+    <img src="/_blob/f962f20b004c3754fbb4c86a779ac88d" alt="Logo Porprov Jawa Tengah XVII 2026" style="width: 84px; height: auto; display: block">
+  </div>
+
+  <div style="padding: 8px 24px 20px; display: flex; flex-direction: column; gap: 4px">
+    <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.01em; color: #0E2A6B">Form pendaftaran</h1>
+    <div style="font-size: 15px; color: #4B5A7A">Opening Ceremony Porprov Jateng XVII 2026</div>
+  </div>
+
+  <div style="margin: 0 16px; background: #FFFFFF; border-radius: 20px; padding: 24px 20px; display: flex; flex-direction: column; gap: 20px">
+    <sc-if value="{{errorFromServer}}" hint-placeholder-val="{{ false }}">
+      <div role="alert" style="display: flex; gap: 10px; padding: 14px; border-radius: 12px; background: #FFF1DC; color: #7A3E00; font-size: 14px; line-height: 1.5">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7A3E00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg>
+        <div><strong>Sisa kuota tinggal {{maxQty}} tiket.</strong> Silakan kurangi jumlah tiket, lalu tekan Daftar lagi. Data lain tidak perlu diisi ulang.</div>
+      </div>
+    </sc-if>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label for="nama" style="font-size: 14px; font-weight: 700">Nama lengkap</label>
+      <input id="nama" type="text" value="{{nameVal}}" placeholder="Nama lengkap Anda" autocomplete="name" style="height: 50px; box-sizing: border-box; padding: 0 14px; border: 1.5px solid #C5D0E3; border-radius: 12px; font-size: 16px; font-family: inherit; color: #0B1B3F; background: #FFFFFF">
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label for="domisili" style="font-size: 14px; font-weight: 700">Domisili</label>
+      <select id="domisili" style="height: 50px; box-sizing: border-box; padding: 0 12px; border: 1.5px solid #C5D0E3; border-radius: 12px; font-size: 16px; font-family: inherit; color: #0B1B3F; background: #FFFFFF">
+        <option>Pilih kabupaten/kota</option>
+        <option>Kota Semarang</option>
+        <option>Kab. Semarang</option>
+        <option>Kota Tegal</option>
+        <option>Kab. Tegal</option>
+        <option>Luar Jawa Tengah</option>
+      </select>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label for="email" style="font-size: 14px; font-weight: 700">Email</label>
+      <div style="display: flex; align-items: center; height: 50px; box-sizing: border-box; border: 1.5px solid #C5D0E3; border-radius: 12px; overflow: hidden; background: #FFFFFF">
+        <input id="email" type="text" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" value="{{localVal}}" onInput="{{onLocal}}" placeholder="nama.anda" style="flex: 1 1 auto; min-width: 0; height: 100%; border: none; padding: 0 12px; font-size: 16px; font-family: inherit; color: #0B1B3F; background: transparent">
+        <span aria-hidden="true" style="padding: 0 6px; font-size: 16px; font-weight: 700; color: #4B5A7A">@</span>
+        <select aria-label="Domain email" value="{{domain}}" onChange="{{onDomain}}" style="flex: 0 0 136px; height: 100%; border: none; border-left: 1.5px solid #C5D0E3; padding: 0 8px; font-size: 15px; font-family: inherit; color: #0B1B3F; background: #F6F8FC">
+          <option value="gmail.com">gmail.com</option>
+          <option value="yahoo.com">yahoo.com</option>
+          <option value="yahoo.co.id">yahoo.co.id</option>
+          <option value="outlook.com">outlook.com</option>
+          <option value="icloud.com">icloud.com</option>
+          <option value="lainnya">Lainnya…</option>
+        </select>
+      </div>
+      <sc-if value="{{showCustom}}" hint-placeholder-val="{{ false }}">
+        <input aria-label="Domain email lainnya" type="text" autocapitalize="none" spellcheck="false" value="{{customVal}}" onInput="{{onCustom}}" placeholder="contoh: kantor.co.id" style="height: 50px; box-sizing: border-box; padding: 0 14px; border: 1.5px solid #C5D0E3; border-radius: 12px; font-size: 16px; font-family: inherit; color: #0B1B3F; background: #FFFFFF">
+      </sc-if>
+      <div style="font-size: 13px; color: #4B5A7A">Email lengkap: <strong style="color: #0B1B3F">{{fullEmail}}</strong></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label for="wa" style="font-size: 14px; font-weight: 700">Nomor WhatsApp</label>
+      <input id="wa" type="tel" inputmode="numeric" value="{{phoneVal}}" placeholder="08xxxxxxxxxx" autocomplete="tel" style="height: 50px; box-sizing: border-box; padding: 0 14px; border: 1.5px solid #C5D0E3; border-radius: 12px; font-size: 16px; font-family: inherit; color: #0B1B3F; background: #FFFFFF">
+      <div style="font-size: 13px; color: #4B5A7A">Boleh diawali 08 atau 62. E-ticket dikirim ke nomor ini. Satu nomor hanya bisa mendaftar sekali.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <div id="qty-label" style="font-size: 14px; font-weight: 700">Jumlah tiket</div>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+        <div role="group" aria-labelledby="qty-label" style="display: flex; align-items: center; border: 1.5px solid #C5D0E3; border-radius: 14px; overflow: hidden">
+          <button type="button" aria-label="Kurangi tiket" disabled="{{minusDisabled}}" onClick="{{dec}}" style="width: 56px; height: 52px; border: none; background: {{minusBg}}; color: {{minusColor}}; font-size: 24px; font-weight: 700; font-family: inherit; cursor: pointer">−</button>
+          <output aria-live="polite" style="width: 64px; text-align: center; font-size: 22px; font-weight: 800; color: #0E2A6B">{{qty}}</output>
+          <button type="button" aria-label="Tambah tiket" disabled="{{plusDisabled}}" onClick="{{inc}}" style="width: 56px; height: 52px; border: none; background: {{plusBg}}; color: {{plusColor}}; font-size: 24px; font-weight: 700; font-family: inherit; cursor: pointer">+</button>
+        </div>
+        <div style="font-size: 13px; line-height: 1.4; color: #4B5A7A; text-align: right">1 tiket untuk 1 orang.<br>Maks. 4 tiket.</div>
+      </div>
+      <sc-if value="{{showQuotaMsg}}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="font-size: 14px; font-weight: 600; color: #B42318">Sisa kuota tinggal {{maxQty}} tiket.</div>
+      </sc-if>
+    </div>
+
+    <div style="height: 66px; border: 1.5px dashed #C5D0E3; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #4B5A7A">[Verifikasi Cloudflare Turnstile]</div>
+
+    <a href="Sukses.dc.html" style="display: flex; align-items: center; justify-content: center; height: 56px; border-radius: 14px; background: #0E2A6B; color: #FFFFFF; font-size: 17px; font-weight: 700; text-decoration: none">Daftar</a>
+  </div>
+
+  <div style="padding: 20px 24px 28px; font-size: 13px; line-height: 1.5; color: #4B5A7A">Dengan mendaftar, Anda setuju data digunakan untuk keperluan registrasi acara ini.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"maxQty":{"editor":"int","default":4,"min":1,"max":4,"section":"Simulasi kuota"},"errorFromServer":{"editor":"boolean","default":false,"section":"Simulasi kuota"},"$preview":{"width":390,"height":1240}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { qty: 1, local: null, domain: 'gmail.com', custom: '' };
+  }
+  renderVals() {
+    const max = Math.max(1, Math.min(4, Number(this.props.maxQty ?? 4)));
+    const err = !!(this.props.errorFromServer ?? false);
+    const qty = Math.min(this.state.qty, max);
+    const minusDisabled = qty <= 1;
+    const plusDisabled = qty >= max;
+    const DOMAINS = ['gmail.com', 'yahoo.com', 'yahoo.co.id', 'outlook.com', 'icloud.com'];
+    const localVal = this.state.local ?? (err ? 'budi' : '');
+    const domain = this.state.domain;
+    const customVal = this.state.custom;
+    const shownDomain = domain === 'lainnya' ? (customVal || 'domain') : domain;
+    const fullEmail = (localVal || 'nama') + '@' + shownDomain;
+    return {
+      maxQty: max,
+      errorFromServer: err,
+      qty: qty,
+      minusDisabled: minusDisabled,
+      plusDisabled: plusDisabled,
+      minusBg: minusDisabled ? '#F1F4F9' : '#FFFFFF',
+      plusBg: plusDisabled ? '#F1F4F9' : '#FFFFFF',
+      minusColor: minusDisabled ? '#8C98B0' : '#0E2A6B',
+      plusColor: plusDisabled ? '#8C98B0' : '#0E2A6B',
+      showQuotaMsg: plusDisabled && max < 4 && !err,
+      localVal: localVal,
+      domain: domain,
+      customVal: customVal,
+      showCustom: domain === 'lainnya',
+      fullEmail: fullEmail,
+      onLocal: (e) => {
+        const v = e.target.value;
+        if (v.includes('@')) {
+          const parts = v.split('@');
+          const l = parts[0];
+          const d = parts.slice(1).join('@').trim().toLowerCase();
+          if (DOMAINS.includes(d)) this.setState({ local: l, domain: d });
+          else if (d) this.setState({ local: l, domain: 'lainnya', custom: d });
+          else this.setState({ local: l });
+        } else {
+          this.setState({ local: v });
+        }
+      },
+      onDomain: (e) => this.setState({ domain: e.target.value }),
+      onCustom: (e) => this.setState({ custom: e.target.value.trim().toLowerCase() }),
+      nameVal: err ? 'Budi Santoso' : '',
+      phoneVal: err ? '081234567890' : '',
+      dec: () => this.setState({ qty: Math.max(1, qty - 1) }),
+      inc: () => this.setState({ qty: Math.min(max, qty + 1) })
+    };
+  }
+}
+</script>
+</body>
+</html>

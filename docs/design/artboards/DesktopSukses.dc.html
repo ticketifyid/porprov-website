@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Pendaftaran berhasil (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#EEF3FB;color:#0B1B3F}
+a{color:#1F5FD6}a:hover{color:#123F9E}
+</style>
+</helmet>
+<div style="width: 1280px; height: 820px; box-sizing: border-box; background: #EEF3FB; display: flex; flex-direction: column; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1B3F">
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: 6px">
+    <div style="background: #179C52"></div><div style="background: #F2B705"></div><div style="background: #D93A2B"></div><div style="background: #1F5FD6"></div>
+  </div>
+  <div style="height: 84px; padding: 0 80px; background: #FFFFFF; display: flex; align-items: center; justify-content: space-between">
+    <a href="DesktopMain.dc.html" aria-label="Kembali ke beranda"><img src="/_blob/f962f20b004c3754fbb4c86a779ac88d" alt="Logo Porprov Jawa Tengah XVII 2026" style="width: 112px; height: auto; display: block"></a>
+    <a href="DesktopLupaTiket.dc.html" style="font-size: 15px; font-weight: 600; color: #0E2A6B; text-decoration: none">Cari tiket saya</a>
+  </div>
+
+  <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 40px">
+    <div style="width: 600px; background: #FFFFFF; border-radius: 28px; padding: 44px 48px; display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center">
+      <div style="width: 84px; height: 84px; border-radius: 50%; background: #179C52; display: flex; align-items: center; justify-content: center" aria-hidden="true">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>
+      </div>
+      <h1 style="margin: 0; font-size: 32px; font-weight: 800; color: #0E2A6B">Pendaftaran berhasil</h1>
+      <p style="margin: 0; max-width: 460px; font-size: 16px; line-height: 1.55; color: #4B5A7A">E-ticket sudah dikirim ke email dan WhatsApp Anda. Jika belum masuk dalam beberapa menit, cek folder spam.</p>
+
+      <div style="width: 100%; box-sizing: border-box; background: #EEF3FB; border-radius: 18px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; text-align: left">
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <div style="font-size: 14px; color: #4B5A7A">Kode registrasi</div>
+          <div style="font-size: 26px; font-weight: 800; letter-spacing: 0.05em; color: #0E2A6B">PJT26-7K3M9Q</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 2px; align-items: flex-end">
+          <div style="font-size: 14px; color: #4B5A7A">Jumlah</div>
+          <div style="font-size: 26px; font-weight: 800; color: #0E2A6B">4 tiket</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 6px">
+        <a href="DesktopTiket.dc.html" style="display: flex; align-items: center; justify-content: center; height: 54px; padding: 0 36px; border-radius: 14px; background: #0E2A6B; color: #FFFFFF; font-size: 16px; font-weight: 700; text-decoration: none">Lihat e-ticket</a>
+        <a href="DesktopMain.dc.html" style="display: flex; align-items: center; justify-content: center; height: 54px; padding: 0 28px; border-radius: 14px; border: 1.5px solid #C5D0E3; color: #0E2A6B; font-size: 16px; font-weight: 700; text-decoration: none">Kembali ke beranda</a>
+      </div>
+      <div style="font-size: 14px; line-height: 1.5; color: #4B5A7A">Simpan kode registrasi ini. Petugas bisa mencari data Anda dengan kode ini jika QR tidak terbaca.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":820}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
