@@ -135,8 +135,9 @@ class TicketController extends Controller
     }
 
     /**
-     * Dua karakter pertama local-part + "***" + "@domain" (contoh artboard:
-     * bu***@email.com).
+     * Dua karakter pertama local-part + "***" + "@domain".
+     *
+     * Contoh artboard: bu***@email.com
      */
     private function maskEmail(string $email): string
     {

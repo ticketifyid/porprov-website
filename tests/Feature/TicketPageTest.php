@@ -10,7 +10,6 @@ use App\Models\Registration;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class TicketPageTest extends TestCase
