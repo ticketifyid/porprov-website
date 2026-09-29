@@ -48,6 +48,17 @@ Catatan penting:
   Catatan: `AssetVersion` melanggar aturan "Support/ hanya untuk helper murni tanpa dependency Laravel" karena butuh `asset()` dan `public_path()`. Ditempatkan di sana supaya semua helper tetap satu folder, alih-alih membuka folder baru untuk satu kelas.
 - `StoreRegistrationRequest::getRedirectUrl()` di-override menjadi `previous(route('daftar'))` supaya error validasi selalu kembali ke form meski browser tidak mengirim header `Referer` (tanpa ini pengguna terlempar ke beranda dan pesan errornya tidak terlihat).
 
+### Penyimpangan disetujui pada Fase 5
+
+- `LogTicketNotifier` ditaruh di `app/Services/Notifications/`, bukan `app/Notifications/` seperti struktur awal — `app/Notifications/` adalah folder bawaan Laravel untuk kelas Notification, dan implementasi `TicketNotifier` bukan itu. Daftar struktur dan bagian "Alasan pemisahan" di bawah sudah disesuaikan; implementasi asli Fase 10 juga masuk ke folder yang sama.
+- File Fase 5 lainnya sudah tercantum di struktur di bawah (`Contracts/TicketNotifier.php`, `Jobs/SendTicketNotification.php`, `tests/Feature/NotificationJobTest.php`).
+- Binding `TicketNotifier` ada di `AppServiceProvider::register()` (bukan `boot()`) lewat `match` atas `config('services.ticket_notifier')`. Driver yang tidak dikenal **melempar `InvalidArgumentException`**, bukan jatuh ke `LogTicketNotifier`: salah ketik `TICKET_NOTIFIER` di produksi harus gagal keras, bukan berakhir "semua log berstatus sent tapi tidak ada peserta yang menerima".
+- `SendTicketNotification`: `$tries = 3`, `$backoff = [60, 300]` detik. Saat gagal, job menaikkan `attempts` + mengisi `last_error` lalu **melempar ulang exception-nya** — retry dan penyerahan diurus queue, bukan job. Penanda `status = 'failed'` dipasang di `failed()`. Kanal divalidasi di awal `handle()` sebelum menyentuh database (kanal salah = salah kode, tidak boleh sempat membuat baris `notification_logs`), dan log yang sudah `sent` tidak dikirim ulang (idempoten, karena worker bisa mati setelah kirim tapi sebelum job dihapus dari antrean).
+- `docs/notifikasi.md` (dokumen baru, tidak ada di daftar dokumen awal `CLAUDE.md`): panduan untuk pemilik proyek di Fase 10 — kontrak interface, cara menambah implementasi, perilaku retry, cara mengetes, cara memeriksa di produksi.
+- `config/services.php` → `ticket_notifier` (`TICKET_NOTIFIER` di `.env`, default `log`), sejajar blok `turnstile` dari Fase 4.
+- `routes/console.php` diisi `Schedule::command('queue:work --stop-when-empty --max-time=50')->everyMinute()->withoutOverlapping(5)` seperti `docs/hosting.md`, dengan satu tambahan: kunci `withoutOverlapping` dibatasi **5 menit**, bukan default 24 jam. Shared hosting biasa membunuh proses yang dianggap terlalu lama, dan proses yang mati tidak sempat melepas kuncinya — dengan default, satu worker yang dibunuh membuat seluruh notifikasi berhenti sampai kuncinya kedaluwarsa keesokan harinya.
+- Efek samping yang diterima: `RegistrationTest` yang tidak memakai `Queue::fake()` menjalankan job secara sinkron (`QUEUE_CONNECTION=sync` di `phpunit.xml`), jadi `LogTicketNotifier` ikut menulis ke `storage/logs/laravel.log` saat tes. Dibiarkan karena isinya bukan data rahasia dan mematikannya butuh binding khusus di tes.
+
 ```
 app/
   Actions/
@@ -62,8 +73,9 @@ app/
     UserRole.php                      # admin / scanner, ditambahkan Fase 2 (lihat catatan di atas)
   Contracts/
     TicketNotifier.php
-  Notifications/
-    LogTicketNotifier.php             # implementasi default (TICKET_NOTIFIER=log)
+  Services/
+    Notifications/
+      LogTicketNotifier.php           # implementasi default (TICKET_NOTIFIER=log)
   Http/
     Controllers/
       Public/
@@ -178,5 +190,5 @@ Fase 2 memakai `layouts/admin.blade.php` (sidebar + header Metronic) apa adanya 
 
 - Tidak ada `Repositories/` atau `Services/` untuk logika bisnis inti — `Actions/` sudah cukup tipis dan eksplisit untuk dua operasi paling kritis (registrasi dan redeem), tanpa lapisan abstraksi tambahan.
 - `Support/` khusus helper murni tanpa state dan tanpa dependency Laravel selain fungsi bawaan PHP — mudah diuji sebagai unit test murni.
-- `Notifications/` (bukan `Services/Notifications/`) menyimpan implementasi `TicketNotifier`; implementasi asli (Mail, HTTP ke VPS) masuk folder yang sama di Fase 10 tanpa mengubah controller/job.
+- `Services/Notifications/` menyimpan implementasi `TicketNotifier`; implementasi asli (Mail, HTTP ke VPS) masuk folder yang sama di Fase 10 tanpa mengubah controller/job. (Struktur awal menulis `Notifications/` di akar `app/`; diubah pada Fase 5 — lihat catatan fase itu.)
 - Controller publik, scanner, dan admin dipisah namespace supaya middleware role jelas dan rute mudah digrup di `web.php`.

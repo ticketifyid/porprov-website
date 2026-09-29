@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Contracts\TicketNotifier;
+use App\Services\Notifications\LogTicketNotifier;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -12,7 +15,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Implementasi pengiriman e-ticket dipilih lewat TICKET_NOTIFIER
+        // (docs/arsitektur.md Fase 2, docs/notifikasi.md). Driver yang tidak
+        // dikenal sengaja melempar exception, bukan diam-diam jatuh ke log:
+        // salah ketik di produksi harus langsung terlihat, bukan berujung
+        // peserta tidak menerima apa-apa sementara statusnya 'sent'.
+        $this->app->singleton(TicketNotifier::class, function (): TicketNotifier {
+            $driver = (string) config('services.ticket_notifier');
+
+            return match ($driver) {
+                'log' => new LogTicketNotifier,
+                default => throw new InvalidArgumentException(
+                    "Implementasi TicketNotifier '{$driver}' tidak dikenal. Lihat docs/notifikasi.md.",
+                ),
+            };
+        });
     }
 
     /**

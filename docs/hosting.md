@@ -27,8 +27,11 @@
   ```
   dan di `routes/console.php`:
   ```php
-  Schedule::command('queue:work --stop-when-empty --max-time=50')->everyMinute()->withoutOverlapping();
+  Schedule::command('queue:work --stop-when-empty --max-time=50')
+      ->everyMinute()
+      ->withoutOverlapping(5);
   ```
+  Kunci `withoutOverlapping` dibatasi **5 menit**, bukan default 24 jam: shared hosting biasa membunuh proses yang dianggap terlalu lama, dan proses yang mati tidak sempat melepas kuncinya. Dengan default, satu worker yang dibunuh membuat seluruh notifikasi berhenti sampai kuncinya kedaluwarsa keesokan harinya; dengan 5 menit, cron berikutnya paling lama menunggu 5 menit lalu jalan lagi sendiri.
 - **Symlink storage manual.** `php artisan storage:link` memakai fungsi PHP `symlink()` yang biasanya dimatikan. Jika perlu, buat lewat SSH: `ln -s ../storage/app/public public/storage`.
 - **Deploy** lewat `git clone`/`git pull` + `composer install --no-dev --optimize-autoloader`. `vendor/` dan `.env` tidak di-commit.
 

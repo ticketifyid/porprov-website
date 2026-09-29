@@ -39,6 +39,14 @@ return [
         'enabled' => env('TURNSTILE_ENABLED', true),
     ],
 
+    /*
+     * Implementasi App\Contracts\TicketNotifier yang dipakai job notifikasi.
+     * Saat ini hanya 'log' (App\Notifications\LogTicketNotifier) yang tersedia;
+     * nilai lain baru ada setelah implementasi asli dibuat (docs/notifikasi.md).
+     * Nilai yang tidak dikenal sengaja melempar exception di AppServiceProvider.
+     */
+    'ticket_notifier' => env('TICKET_NOTIFIER', 'log'),
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
