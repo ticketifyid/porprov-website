@@ -20,7 +20,7 @@ class StoreUserRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:100'],
             'username' => ['required', 'string', 'max:50', 'unique:users,username'],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => ['required', 'string', 'min:12'],
             'role' => ['required', Rule::in(['admin', 'scanner'])],
         ];
     }
@@ -35,7 +35,7 @@ class StoreUserRequest extends FormRequest
             'username.required' => 'Username wajib diisi.',
             'username.unique' => 'Username sudah dipakai.',
             'password.required' => 'Kata sandi wajib diisi.',
-            'password.min' => 'Kata sandi minimal 8 karakter.',
+            'password.min' => 'Kata sandi minimal 12 karakter.',
             'role.required' => 'Role wajib dipilih.',
         ];
     }

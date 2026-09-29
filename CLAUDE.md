@@ -35,7 +35,7 @@ Kuota 3.600 tiket. Maksimal 4 tiket per pendaftaran. 1 pendaftaran = 1 QR, dituk
 10. **Dua mode scan:** `camera` (HP) = dua langkah, scan lalu konfirmasi. `hardware` (alat scanner mode keyboard di laptop) = sekali scan langsung tertukar. Pencarian manual = dua langkah.
 11. **Cari tiket** selalu membalas pesan netral yang sama, terdaftar atau tidak. Link hanya dikirim ke kontak terdaftar, tidak ditampilkan di layar.
 12. **Peserta tidak punya akun.** Hanya `users` dengan role `admin` / `scanner`.
-13. **Duplikat pendaftaran dicek lewat `email_canonical`, bukan `email` mentah.** Kolom `email` menyimpan email persis seperti diketik (setelah lowercase) dan dipakai untuk mengirim e-ticket. `email_canonical` dihitung oleh helper `EmailCanonicalizer` (`app/Support/`), dipakai HANYA untuk cek unique `(event_id, email_canonical)`, tidak pernah untuk mengirim notifikasi:
+13. **Duplikat pendaftaran dicek lewat `email_canonical`, bukan `email` mentah.** Kolom `email` menyimpan email persis seperti diketik (setelah lowercase) dan dipakai untuk mengirim e-ticket. `email_canonical` dihitung oleh helper `EmailCanonicalizer` (`app/Support/`), dipakai untuk (a) cek unique `(event_id, email_canonical)` saat mendaftar, (b) pencarian registrasi di `/cari-tiket`, dan (c) kunci throttle per-kontak `/cari-tiket` (keputusan Fase 6). Tidak pernah dipakai untuk mengirim notifikasi; pengiriman selalu ke `email`:
     - lowercase + trim.
     - domain `googlemail.com` diperlakukan sebagai `gmail.com`.
     - khusus domain `gmail.com` (setelah normalisasi di atas): buang semua titik di bagian nama, dan buang bagian setelah tanda `+` (termasuk tandanya).

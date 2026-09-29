@@ -125,6 +125,38 @@ php artisan db:seed --force
 
 Kalau rilis berikutnya menambah migration, cukup `php artisan migrate --force`.
 
+### Pemulihan admin (tidak ada admin aktif)
+
+`AdminUserSeeder` memakai `firstOrCreate`, jadi menjalankannya ulang **tidak** bisa
+mengaktifkan kembali atau mereset admin yang sudah ada. Kalau semua admin ternyata
+nonaktif (mis. dua admin saling menonaktifkan bersamaan), pulihkan lewat salah satu jalur:
+
+**A. Hosting punya SSH — `tinker`:**
+
+```bash
+php artisan tinker
+>>> App\Models\User::where('username', 'NAMA_ADMIN')->update(['is_active' => true]);
+```
+
+Untuk sekalian mengganti kata sandi (min. 12 karakter):
+
+```
+>>> $u = App\Models\User::where('username', 'NAMA_ADMIN')->first();
+>>> $u->password = Illuminate\Support\Facades\Hash::make('KATA-SANDI-BARU-MIN-12'); $u->save();
+```
+
+**B. Tanpa SSH — phpMyAdmin:** buka database aplikasi, tab SQL, jalankan:
+
+```sql
+UPDATE users SET is_active = 1 WHERE username = 'NAMA_ADMIN' AND role = 'admin';
+```
+
+Kata sandi tidak bisa diganti dengan cara ini (hash bcrypt tidak bisa ditulis tangan).
+Kalau lupa kata sandinya, setelah akun aktif kembali login dengan admin lain, atau
+minta admin lain mengubahnya lewat `/admin/users`.
+
+Setelah itu login dan pastikan `/admin/users` menampilkan minimal satu admin aktif.
+
 ## 6. Cache (tiap rilis)
 
 ```bash
@@ -199,6 +231,27 @@ kamera di halaman non-HTTPS (`docs/arsitektur.md` Fase 4).
    redirect loop — lalu aktifkan lagi begitu SSL terpasang.
 3. **Verifikasi:** buka `http://DOMAIN/scanner` dari HP — harus berpindah ke `https://`,
    dan tombol "Mulai kamera" harus memunculkan izin kamera, bukan peringatan HTTPS.
+
+### HSTS (langkah lanjutan — JANGAN dipasang sebelum HTTPS stabil)
+
+Header `Strict-Transport-Security` sengaja **belum** ada di `public/.htaccess`. Pasang
+hanya setelah HTTPS terbukti stabil beberapa hari (sertifikat terpasang dan
+auto-renew jalan, tidak ada halaman/aset yang masih `http://`, scanner di HP normal).
+
+Risikonya: begitu browser menerima HSTS, ia menolak membuka domain lewat `http://` dan
+menolak melewati peringatan sertifikat selama `max-age`. Kalau sertifikat kedaluwarsa
+atau SSL dicabut, situs **tidak bisa dibuka sama sekali** dari browser yang sudah
+menyimpannya, dan tidak ada tombol "lanjutkan" untuk peserta atau petugas. Efeknya
+tidak bisa ditarik dari sisi server, hanya menunggu `max-age` habis. Karena itu:
+
+1. Mulai dengan `max-age` pendek, mis. `300` (5 menit), lalu naikkan bertahap (1 hari,
+   1 minggu, 1 bulan).
+2. Jangan tambahkan `includeSubDomains` atau `preload` kecuali seluruh subdomain sudah
+   HTTPS; `preload` praktis tidak bisa dibatalkan.
+3. Contoh di `public/.htaccess`, dalam `<IfModule mod_headers.c>`:
+   `Header always set Strict-Transport-Security "max-age=300"`
+4. Jangan menaikkan `max-age` menjelang hari acara; risiko kegagalan sertifikat di saat
+   itu tidak sebanding manfaatnya.
 
 ### Proxy & IP asli (lanjutan catatan Fase 7)
 

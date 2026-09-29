@@ -47,10 +47,8 @@ class RegisterAttendee
 
             $locked->increment('tickets_taken', $qty);
 
-            return Registration::create([
+            $registration = new Registration([
                 'event_id' => $locked->getKey(),
-                'code' => $this->uniqueCode($locked->code_prefix),
-                'token' => $this->uniqueToken(),
                 'name' => $data['name'],
                 'regency_id' => $data['regency_id'],
                 'email' => $data['email'],
@@ -59,6 +57,13 @@ class RegisterAttendee
                 'ticket_qty' => $qty,
                 'ip_address' => $ip,
             ]);
+
+            $registration->forceFill([
+                'code' => $this->uniqueCode($locked->code_prefix),
+                'token' => $this->uniqueToken(),
+            ])->save();
+
+            return $registration;
         });
     }
 

@@ -45,7 +45,7 @@ class TicketPageTest extends TestCase
         static $n = 0;
         $n++;
 
-        return Registration::create(array_merge([
+        return Registration::forceCreate(array_merge([
             'event_id' => $this->event->id,
             'code' => sprintf('PJT26-%06d', $n),
             'token' => str_pad((string) $n, 48, 'x'),

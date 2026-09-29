@@ -74,7 +74,7 @@ class NotificationJobTest extends TestCase
 
         $regency = Regency::create(['name' => 'Kota Semarang', 'sort_order' => 1]);
 
-        $this->registration = Registration::create([
+        $this->registration = Registration::forceCreate([
             'event_id' => $event->id,
             'code' => 'PJT26-7K3M9Q',
             'token' => str_repeat('a', 48),
@@ -289,7 +289,7 @@ class NotificationJobTest extends TestCase
     public function test_registrasi_yang_sudah_dibatalkan_tidak_dikirim_dan_log_tetap_pending(): void
     {
         $log = $this->log();
-        $this->registration->update(['cancelled_at' => now(), 'email_canonical' => null]);
+        $this->registration->forceFill(['cancelled_at' => now(), 'email_canonical' => null])->save();
 
         $this->runJob();
 

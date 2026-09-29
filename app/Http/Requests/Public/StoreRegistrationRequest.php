@@ -48,13 +48,21 @@ class StoreRegistrationRequest extends FormRequest
 
         $qty = $this->input('ticket_qty');
 
+        // Karakter kontrol/format/tak-terlihat (\p{C}: null byte, newline, RTL
+        // override, zero-width, dst.) dibuang dari nama sebelum divalidasi.
+        $name = $this->input('name');
+        $name = is_string($name) ? trim((string) preg_replace('/\p{C}+/u', '', $name)) : $name;
+
         $this->merge([
+            'name' => $name,
             'email_local' => $local,
             'email_domain' => $domainChoice,
             'email_domain_other' => $domainOther,
             'email' => $email,
             'email_canonical' => $email === null ? null : EmailCanonicalizer::canonicalize($email),
-            'ticket_qty' => is_numeric($qty) ? (int) $qty : $qty,
+            // Hanya string bilangan bulat murni yang dijadikan int. "1.5" dibiarkan
+            // apa adanya supaya ditolak rule integer, bukan dibulatkan diam-diam.
+            'ticket_qty' => is_string($qty) && preg_match('/^\s*\d+\s*$/', $qty) ? (int) $qty : $qty,
         ]);
     }
 

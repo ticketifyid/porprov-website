@@ -56,14 +56,14 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'username' => ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($user->id)],
-            'password' => ['nullable', 'string', 'min:8'],
+            'password' => ['nullable', 'string', 'min:12'],
             'role' => ['required', Rule::in(['admin', 'scanner'])],
             'is_active' => ['required', 'boolean'],
         ], [
             'name.required' => 'Nama wajib diisi.',
             'username.required' => 'Username wajib diisi.',
             'username.unique' => 'Username sudah dipakai.',
-            'password.min' => 'Kata sandi minimal 8 karakter.',
+            'password.min' => 'Kata sandi minimal 12 karakter.',
             'role.required' => 'Role wajib dipilih.',
         ]);
 

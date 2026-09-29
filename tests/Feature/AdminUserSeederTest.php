@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Database\Seeders\AdminUserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -65,6 +66,26 @@ class AdminUserSeederTest extends TestCase
         (new AdminUserSeeder)->run();
 
         $this->assertNotNull(User::query()->where('username', 'devadmin')->first());
+    }
+
+    public function test_dijalankan_ulang_tidak_mereset_admin_yang_sudah_ada(): void
+    {
+        config(['porprov.admin' => ['username' => 'admin', 'password' => 'K4mis-Sore-Porprov!']]);
+        (new AdminUserSeeder)->run();
+
+        // Admin sudah mengganti kata sandi dan namanya lewat panel.
+        $admin = User::where('username', 'admin')->firstOrFail();
+        $admin->update(['name' => 'Ketua Panitia', 'password' => Hash::make('Sandi-Baru-Panitia-99')]);
+
+        // Seeder dijalankan lagi dengan .env yang password-nya masih yang lama.
+        (new AdminUserSeeder)->run();
+
+        $this->assertSame(1, User::where('username', 'admin')->count());
+
+        $admin = $admin->fresh();
+        $this->assertSame('Ketua Panitia', $admin->name);
+        $this->assertTrue(Hash::check('Sandi-Baru-Panitia-99', $admin->password));
+        $this->assertFalse(Hash::check('K4mis-Sore-Porprov!', $admin->password));
     }
 
     public function test_menolak_kredensial_kosong(): void

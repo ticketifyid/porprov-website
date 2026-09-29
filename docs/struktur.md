@@ -301,6 +301,31 @@ tests/
       ExportTest.php                  # tidak ada di daftar awal, ditambahkan Fase 8 (lihat catatan)
 ```
 
+## Perbaikan keamanan lanjutan (review Fase 9)
+
+Diterapkan setelah review Fase 9; tiap poin punya tes.
+
+- `EventSeeder` dan `AdminUserSeeder` memakai `firstOrCreate`: menjalankan ulang seeder tidak menimpa kuota/jadwal event maupun kata sandi/role admin (`EventSeederTest` baru, `AdminUserSeederTest`).
+- `.env.example`: `TURNSTILE_ENABLED=true`; matikan hanya di `.env` lokal.
+- `/daftar/sukses/{token}` 404 untuk registrasi dibatalkan, dan kini mengirim meta + header `X-Robots-Tag: noindex` dan `Referrer-Policy: no-referrer`. Header `Referrer-Policy` juga ditambahkan ke `TicketController::show` (sebelumnya hanya meta).
+- `ticket_qty` hanya diterima bila string bilangan bulat murni; "1.5" ditolak, tidak dibulatkan.
+- Nama lengkap dibersihkan dari karakter `\p{C}` di `prepareForValidation`.
+- Kata sandi akun petugas minimal 12 karakter (`StoreUserRequest`, `UserController::update`).
+- `POST /login` kini punya `throttle:20,1` per IP di samping throttle username+IP di `LoginController`.
+- `public/.htaccess` mengirim `X-Frame-Options: DENY`. HSTS sengaja belum dipasang (lihat `docs/deploy.md`).
+- `Registration::$fillable` tidak lagi memuat `code`, `token`, `redeemed_*`, `cancelled_*`. `RegisterAttendee` mengisi `code`/`token` lewat `forceFill`; `RedeemRegistration` dan `CancelRegistration` memakai update query bersyarat (tidak lewat fillable). Helper tes memakai `forceCreate`/`forceFill`.
+
+### Risiko yang diterima (keputusan pemilik proyek)
+
+- **Pesan "Akun Anda sudah dinonaktifkan" di login** hanya muncul bila kata sandi benar, tapi tetap membocorkan bahwa akun itu ada dan nonaktif kepada orang yang sudah memegang kata sandinya. Diterima.
+- **`method` scan dipilih klien** (`camera`/`hardware`/`manual`). Petugas bisa memilih `hardware` dari HP untuk melewati langkah konfirmasi. `scan_logs.method` karenanya menunjukkan klaim klien, bukan fakta perangkat. Diterima.
+- **Celah timing di `/cari-tiket`**: respons selalu netral, tapi waktu respons untuk kontak terdaftar (mengantre resend) bisa sedikit lebih lama daripada yang tidak terdaftar. Diterima; throttle per-IP dan per-kontak membatasi penyalahgunaannya.
+- **Race pada cek "admin aktif terakhir"** di `UserController::update`: dua admin yang saling menonaktifkan pada saat bersamaan bisa sama-sama lolos cek dan meninggalkan nol admin aktif. Diterima (jumlah admin kecil); pemulihannya lewat `tinker` (jika ada SSH) atau `UPDATE` di phpMyAdmin (lihat `docs/deploy.md`, "Pemulihan admin"). `AdminUserSeeder` tidak bisa dipakai memulihkan karena kini `firstOrCreate` dan tidak mengubah akun yang sudah ada.
+
+### Catatan untuk Fase 10 (notifikasi asli)
+
+- Pesan exception yang disimpan di `notification_logs.last_error` (lewat `SendTicketNotification::errorMessage`) **harus dibersihkan dari data sensitif** sebelum implementasi WA/email asli dipakai: exception HTTP/SMTP bisa memuat URL beserta API key, header `Authorization`, nomor HP, alamat email, atau token tiket. Buang atau samarkan semuanya dan batasi panjangnya sebelum ditulis ke kolom itu.
+
 ## Catatan untuk Fase 7 (scanner) — SUDAH DIJAWAB
 
 Keputusannya: `scanner/index.blade.php` memakai `layouts/scanner.blade.php` baru (Metronic `app-blank`, tanpa sidebar, header tipis). Lihat "Penyimpangan disetujui pada Fase 7" di atas. Catatan aslinya disimpan di bawah sebagai riwayat.

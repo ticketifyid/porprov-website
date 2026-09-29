@@ -31,7 +31,9 @@ class AdminUserSeeder extends Seeder
 
         $this->assertStrongEnoughForProduction((string) $password);
 
-        User::updateOrCreate(
+        // firstOrCreate, bukan updateOrCreate: menjalankan ulang seeder tidak
+        // boleh mereset kata sandi (atau role/status) admin yang sudah ada.
+        User::firstOrCreate(
             ['username' => $username],
             [
                 'name' => 'Administrator',

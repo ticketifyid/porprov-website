@@ -10,10 +10,10 @@ use App\Jobs\SendTicketNotification;
 use App\Models\Event;
 use App\Models\NotificationLog;
 use App\Models\Registration;
-use Illuminate\Contracts\View\View;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 
 class RegistrationController extends Controller
 {
@@ -84,11 +84,16 @@ class RegistrationController extends Controller
     /**
      * GET /daftar/sukses/{token} — artboard Sukses / DesktopSukses.
      */
-    public function success(string $token): View
+    public function success(string $token): Response
     {
         $registration = Registration::query()->where('token', $token)->firstOrFail();
 
-        return view('public.sukses', ['registration' => $registration]);
+        abort_if($registration->cancelled_at !== null, 404);
+
+        return response()->view('public.sukses', ['registration' => $registration], 200, [
+            'X-Robots-Tag' => 'noindex',
+            'Referrer-Policy' => 'no-referrer',
+        ]);
     }
 
     /**

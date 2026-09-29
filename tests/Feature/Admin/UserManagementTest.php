@@ -25,7 +25,7 @@ class UserManagementTest extends TestCase
         $response = $this->actingAs($admin)->post('/admin/users', [
             'name' => 'Pos 4 - Rina',
             'username' => 'pos4',
-            'password' => 'password123',
+            'password' => 'password12345',
             'role' => 'scanner',
         ]);
 
@@ -34,6 +34,56 @@ class UserManagementTest extends TestCase
         $user = User::where('username', 'pos4')->firstOrFail();
         $this->assertSame('scanner', $user->role->value);
         $this->assertTrue($user->is_active);
+    }
+
+    public function test_password_akun_baru_minimal_12_karakter(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->post('/admin/users', [
+            'name' => 'Pos 5',
+            'username' => 'pos5',
+            'password' => 'sebelas-kar', // 11 karakter
+            'role' => 'scanner',
+        ])->assertSessionHasErrors('password');
+
+        $this->assertNull(User::where('username', 'pos5')->first());
+
+        $this->actingAs($admin)->post('/admin/users', [
+            'name' => 'Pos 5',
+            'username' => 'pos5',
+            'password' => 'dua-belas-kr', // 12 karakter
+            'role' => 'scanner',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertNotNull(User::where('username', 'pos5')->first());
+    }
+
+    public function test_password_saat_edit_akun_minimal_12_karakter(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $petugas = User::factory()->create(['role' => 'scanner']);
+        $hashLama = $petugas->password;
+
+        $this->actingAs($admin)->put('/admin/users/'.$petugas->id, [
+            'name' => $petugas->name,
+            'username' => $petugas->username,
+            'password' => 'sebelas-kar',
+            'role' => 'scanner',
+            'is_active' => '1',
+        ])->assertSessionHasErrors('password');
+
+        $this->assertSame($hashLama, $petugas->fresh()->password);
+
+        $this->actingAs($admin)->put('/admin/users/'.$petugas->id, [
+            'name' => $petugas->name,
+            'username' => $petugas->username,
+            'password' => 'dua-belas-kr',
+            'role' => 'scanner',
+            'is_active' => '1',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertNotSame($hashLama, $petugas->fresh()->password);
     }
 
     public function test_admin_tidak_bisa_menonaktifkan_akun_sendiri(): void

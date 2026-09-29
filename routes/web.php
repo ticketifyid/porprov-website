@@ -35,7 +35,9 @@ if (app()->environment('local')) {
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showForm'])->name('login');
-    Route::post('/login', [LoginController::class, 'login']);
+    // Throttle per IP (20/menit) di samping throttle username+IP (5/menit) di
+    // LoginController: yang kedua tidak menahan penyemprotan banyak username.
+    Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:20,1');
 });
 
 Route::post('/logout', [LoginController::class, 'logout'])

@@ -131,6 +131,90 @@ class RegistrationTest extends TestCase
         $response->assertDontSee('3.600');
     }
 
+    // ------------------------------------------------------- validasi input
+
+    public function test_ticket_qty_desimal_ditolak_bukan_dibulatkan(): void
+    {
+        foreach (['1.5', '2.0', '1e1', '0x2'] as $qty) {
+            $this->post('/daftar', $this->payload(['ticket_qty' => $qty]))
+                ->assertSessionHasErrors('ticket_qty');
+        }
+
+        $this->assertSame(0, Registration::count());
+        $this->assertSame(0, $this->event->fresh()->tickets_taken);
+    }
+
+    public function test_ticket_qty_bilangan_bulat_dalam_bentuk_string_tetap_diterima(): void
+    {
+        Queue::fake();
+
+        $this->post('/daftar', $this->payload(['ticket_qty' => '3']))->assertSessionHasNoErrors();
+
+        $this->assertSame(3, Registration::firstOrFail()->ticket_qty);
+    }
+
+    public function test_karakter_kontrol_dibuang_dari_nama(): void
+    {
+        Queue::fake();
+
+        $this->post('/daftar', $this->payload([
+            'name' => "  Budi\u{0000}\u{200B} San\ttoso\r\n\u{202E} ",
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertSame('Budi Santoso', Registration::firstOrFail()->name);
+    }
+
+    public function test_nama_yang_hanya_berisi_karakter_kontrol_ditolak(): void
+    {
+        $this->post('/daftar', $this->payload(['name' => "\u{200B}\t\n"]))
+            ->assertSessionHasErrors('name');
+
+        $this->assertSame(0, Registration::count());
+    }
+
+    // ------------------------------------------------------ halaman sukses
+
+    public function test_halaman_sukses_noindex_dan_no_referrer(): void
+    {
+        Queue::fake();
+        $this->post('/daftar', $this->payload());
+        $registration = Registration::firstOrFail();
+
+        $response = $this->get('/daftar/sukses/'.$registration->token)->assertOk();
+
+        $response->assertHeader('X-Robots-Tag', 'noindex');
+        $response->assertHeader('Referrer-Policy', 'no-referrer');
+        $response->assertSee('<meta name="robots" content="noindex, nofollow">', false);
+        $response->assertSee('<meta name="referrer" content="no-referrer">', false);
+    }
+
+    public function test_halaman_sukses_registrasi_dibatalkan_menghasilkan_404(): void
+    {
+        Queue::fake();
+        $this->post('/daftar', $this->payload());
+        $registration = Registration::firstOrFail();
+        $registration->forceFill(['cancelled_at' => now(), 'email_canonical' => null])->save();
+
+        $this->get('/daftar/sukses/'.$registration->token)->assertNotFound();
+    }
+
+    // ------------------------------------------------------- mass assignment
+
+    public function test_kolom_sensitif_registrasi_tidak_bisa_diisi_lewat_mass_assignment(): void
+    {
+        $registration = new Registration([
+            'code' => 'PJT26-AAAAAA',
+            'token' => 'x',
+            'redeemed_at' => now(),
+            'redeemed_by' => 1,
+            'cancelled_at' => now(),
+            'cancelled_by' => 1,
+            'name' => 'Budi',
+        ]);
+
+        $this->assertSame(['name' => 'Budi'], $registration->getAttributes());
+    }
+
     // -------------------------------------------------------------- beranda
 
     public function test_beranda_menampilkan_hero_dan_cara_mendaftar(): void

@@ -108,6 +108,21 @@ class AuthTest extends TestCase
         );
     }
 
+    public function test_login_is_throttled_per_ip_across_different_usernames(): void
+    {
+        Cache::flush();
+
+        // Username berbeda-beda: throttle username+IP tidak pernah tercapai,
+        // hanya throttle per IP (20/menit) yang menahan.
+        for ($i = 1; $i <= 20; $i++) {
+            $this->post('/login', ['username' => "user{$i}", 'password' => 'salah'])
+                ->assertSessionHasErrors('username');
+        }
+
+        $this->post('/login', ['username' => 'user21', 'password' => 'salah'])
+            ->assertStatus(429);
+    }
+
     public function test_authenticated_user_can_logout(): void
     {
         $user = $this->makeUser(['role' => 'admin']);

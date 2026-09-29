@@ -2,6 +2,11 @@
 
 @section('title', 'Pendaftaran berhasil')
 
+@push('head')
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+@endpush
+
 @section('content')
     <div class="page-shell centered-page">
         <x-header variant="logo" :logo-size="96">

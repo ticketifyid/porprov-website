@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['event_id', 'code', 'token', 'name', 'regency_id', 'email', 'email_canonical', 'phone', 'ticket_qty', 'redeemed_at', 'redeemed_by', 'cancelled_at', 'cancelled_by', 'ip_address'])]
+// code, token, redeemed_*, dan cancelled_* sengaja tidak fillable: hanya Action
+// yang boleh mengisinya (lewat forceFill / update bersyarat).
+#[Fillable(['event_id', 'name', 'regency_id', 'email', 'email_canonical', 'phone', 'ticket_qty', 'ip_address'])]
 class Registration extends Model
 {
     /**

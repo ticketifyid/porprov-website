@@ -50,7 +50,10 @@ class TicketController extends Controller
             'eventStartsAt' => $this->formatDateTime($event->event_starts_at),
             'venue' => $event->venue,
             'qrSvg' => $this->qrSvg($registration->token),
-        ], 200, ['X-Robots-Tag' => 'noindex']);
+        ], 200, [
+            'X-Robots-Tag' => 'noindex',
+            'Referrer-Policy' => 'no-referrer',
+        ]);
     }
 
     /**
