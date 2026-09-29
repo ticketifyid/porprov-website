@@ -5,6 +5,16 @@
 
     RewriteEngine On
 
+    # Paksa HTTPS. Halaman scanner tidak bisa membuka kamera HP di atas http://
+    # (docs/arsitektur.md Fase 4), dan cookie sesi dipasang Secure di produksi.
+    # Dua kondisi sekaligus: hosting yang meng-handle TLS sendiri (%{HTTPS}) dan
+    # hosting di belakang proxy/Cloudflare yang meneruskan X-Forwarded-Proto.
+    # Kalau domain masih dites tanpa SSL, beri komentar pada empat baris ini.
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+    RewriteCond %{REQUEST_URI} !^/\.well-known/
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
@@ -23,3 +33,46 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# ---------------------------------------------------------------------------
+# Kunci origin ke Cloudflare (AKTIFKAN HANYA jika DNS produksi diproxy
+# Cloudflare — awan oranye). Lihat docs/deploy.md bagian "Proxy & IP asli".
+#
+# Kenapa: bootstrap/app.php mempercayai X-Forwarded-For dari rentang Cloudflare
+# supaya throttle per IP dan registrations.ip_address membaca IP asli peserta.
+# Kalau origin masih bisa dihubungi langsung lewat IP hostingnya, penyerang bisa
+# melewati Cloudflare dan mengirim X-Forwarded-For palsu dari alamat mana pun.
+# Shared hosting tidak memberi akses firewall server, jadi pembatasannya di sini.
+#
+# SEBELUM mengaktifkan: salin ulang daftar rentangnya dari
+# https://www.cloudflare.com/ips/ (daftar di docs/deploy.md bisa sudah basi),
+# dan pastikan hosting memakai Apache 2.4 (Require) — bukan 2.2 (Allow from).
+# Sesudah mengaktifkan: buka domain produksi lewat Cloudflare (harus normal) dan
+# lewat IP origin langsung (harus 403).
+#
+# <IfModule mod_authz_core.c>
+#     <RequireAny>
+#         Require ip 173.245.48.0/20
+#         Require ip 103.21.244.0/22
+#         Require ip 103.22.200.0/22
+#         Require ip 103.31.4.0/22
+#         Require ip 141.101.64.0/18
+#         Require ip 108.162.192.0/18
+#         Require ip 190.93.240.0/20
+#         Require ip 188.114.96.0/20
+#         Require ip 197.234.240.0/22
+#         Require ip 198.41.128.0/17
+#         Require ip 162.158.0.0/15
+#         Require ip 104.16.0.0/13
+#         Require ip 104.24.0.0/14
+#         Require ip 172.64.0.0/13
+#         Require ip 131.0.72.0/22
+#         Require ip 2400:cb00::/32
+#         Require ip 2606:4700::/32
+#         Require ip 2803:f800::/32
+#         Require ip 2405:b500::/32
+#         Require ip 2405:8100::/32
+#         Require ip 2a06:98c0::/29
+#         Require ip 2c0f:f248::/32
+#     </RequireAny>
+# </IfModule>

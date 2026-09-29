@@ -107,7 +107,54 @@ Catatan penting:
 - Penambahan kecil di test yang sudah ada (bukan file baru): `ScanTest.php` (tiket dibatalkan di ketiga jalur scan), `TicketPageTest.php` (404 tiket dibatalkan, `/cari-tiket` memperlakukannya seolah tidak terdaftar), `RegistrationTest.php` (daftar ulang dengan email sama setelah dibatalkan), `NotificationJobTest.php` (job melewati registrasi yang dibatalkan).
 - **`DB::prohibitDestructiveCommands($this->app->isProduction())`** ditambahkan di `AppServiceProvider::boot()` (bukan bagian dari daftar `tests/` Fase 2 mana pun): melarang `migrate:fresh`, `migrate:refresh`, `migrate:reset`, `migrate:rollback`, dan `db:wipe` berjalan di `APP_ENV=production`, dari insiden `migrate:fresh --env=testing` yang salah sasaran menimpa DB lokal MySQL (bukan SQLite in-memory) karena proyek ini tidak punya `.env.testing`. `tests/Feature/DestructiveCommandsTest.php` (baru, tidak ada di daftar `tests/` awal) membuktikan `migrate:fresh` ditolak (exit code 1, tidak menyentuh DB) saat environment di-set ke `production`, dan tetap berjalan normal di `local`/`testing`.
 
+### Penyimpangan disetujui pada Fase 9
 
+- **`scripts/` (folder baru, tidak ada di struktur awal)** berisi satu file,
+  `scripts/uji-war-kuota.php` — alat uji war kuota yang diminta `docs/prompts.md` Fase 9
+  poin 2. Bukan kode aplikasi (tidak di-autoload, tidak pernah dijalankan oleh web
+  server), jadi tidak masuk `app/`; dan bukan tes otomatis, karena butuh MySQL sungguhan,
+  proses paralel, dan database terpisah — tidak bisa jalan di SQLite in-memory milik
+  `phpunit.xml`. Tiga subperintah: `siapkan`, `tembak`, `bersihkan`.
+- **Uji war kuota memakai proses terpisah, bukan `curl` ke `php artisan serve`.** Server
+  bawaan PHP melayani satu request pada satu waktu di Windows (`PHP_CLI_SERVER_WORKERS`
+  hanya jalan di Unix), jadi "50 request paralel" lewat HTTP berubah jadi antrean dan
+  tidak menguji apa pun. Sebagai gantinya tiap pendaftar adalah proses PHP sendiri yang
+  mem-boot Laravel, menunggu satu titik waktu yang sama, lalu melewatkan `POST /daftar`
+  melalui HTTP kernel — middleware, `StoreRegistrationRequest`, controller, dan
+  `RegisterAttendee` berjalan apa adanya. Dua penyesuaian yang perlu di proses itu:
+  `PreventRequestForgery::except(['daftar'])` (tidak ada browser, jadi tidak ada token
+  CSRF) dan `REMOTE_ADDR` berbeda per pendaftar (kalau sama, `throttle:20,1` menolak 30
+  dari 50 pendaftar sebelum kuota sempat diuji).
+- **Pagar database uji**: skrip hanya mau menyentuh database bernama
+  `porprov_website_race` lewat `.env.race` yang dibuat otomatis dari `.env`, dan menolak
+  jalan kalau `DB_DATABASE` bukan nama itu. `migrate:fresh --seed` yang dijalankannya
+  selalu mengenai database race, tidak pernah `porprov_website`. `.env.race` masuk
+  `.gitignore`. Hasil uji: dari 125 tiket yang diminta 50 pendaftar serentak dengan sisa
+  kuota 10, tepat 10 tiket disetujui pada tiap percobaan, `tickets_taken` selalu sama
+  dengan jumlah `ticket_qty` yang tersimpan, dan sisanya ditolak dengan pesan kuota.
+- **`AdminUserSeeder` menolak kata sandi lemah saat `APP_ENV=production`** (aturan
+  tambahan pemilik proyek): kata sandi `password` (apa pun huruf besar-kecilnya) atau
+  kurang dari 12 karakter melempar `RuntimeException`. Di `local`/`testing` aturan ini
+  sengaja tidak berlaku supaya `migrate:fresh --seed` sehari-hari tidak terganggu.
+  Dijaga `tests/Feature/AdminUserSeederTest.php` (baru).
+- **`public/.htaccess`** menambah dua blok: (1) redirect paksa ke `https://` — dua
+  kondisi sekaligus (`%{HTTPS}` dan `X-Forwarded-Proto`) supaya benar baik di hosting
+  yang meng-handle TLS sendiri maupun di belakang proxy, dengan `.well-known/`
+  dikecualikan agar penerbitan sertifikat tidak ikut teralih; dan (2) blok `Require ip`
+  rentang Cloudflare dalam keadaan **dikomentari**, untuk mengunci origin kalau DNS
+  produksi diproxy Cloudflare. Shared hosting tidak memberi akses firewall server, jadi
+  `.htaccess` adalah satu-satunya tempat yang realistis untuk pembatasan ini.
+- **`trustProxies` produksi tetap tidak diubah di kode.** `docs/hosting.md` masih `[ISI]`
+  sehingga belum diketahui apakah domain produksi memakai proxy Cloudflare, dan
+  keputusan itu bukan milik Claude Code. `docs/deploy.md` memuat blok pengganti yang siap
+  disalin (daftar rentang Cloudflare, aman terhadap `config:cache`, dan tidak merusak
+  `tests/Feature/TrustedProxyTest.php` karena `127.0.0.1` tetap di luar rentang).
+- **`.env.example`** menambah `SESSION_SECURE_COOKIE=false` dengan catatan bahwa
+  produksi wajib `true` — sebelumnya kunci ini tidak ada sama sekali, sehingga mudah
+  terlewat saat menyusun `.env` produksi.
+- **`docs/deploy.md` dan `docs/uji-e2e.md`** (dua dokumen baru, ditambahkan ke daftar
+  dokumen acuan di `CLAUDE.md`). Seluruh isi "Catatan untuk Fase 9" di bawah sudah pindah
+  ke `docs/deploy.md` bagian 8; catatan aslinya disimpan sebagai riwayat.
 
 ```
 app/
