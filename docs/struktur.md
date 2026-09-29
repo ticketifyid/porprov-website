@@ -228,6 +228,18 @@ Keputusannya: `scanner/index.blade.php` memakai `layouts/scanner.blade.php` baru
 
 Fase 2 memakai `layouts/admin.blade.php` (sidebar + header Metronic) apa adanya untuk `scanner/index.blade.php`, karena di fase itu halamannya masih kosong. Di Fase 7, hasil scan harus tampil **besar dan kontras** (hijau "SERAHKAN N GELANG", merah "SUDAH DITUKAR", abu "QR TIDAK DIKENAL") dan dipakai petugas dari HP di lapangan — sidebar Metronic akan memakan ruang layar dan mengganggu fokus. Saat mengerjakan Fase 7, tinjau ulang apakah `scanner/index.blade.php` perlu tampilan fokus tanpa sidebar (mis. varian `class="app-blank"` seperti `layouts/auth.blade.php`, header tipis berisi nama petugas + tombol keluar saja) alih-alih tetap mewarisi `layouts/admin.blade.php` penuh.
 
+## Catatan untuk Fase 9 (deploy) — trustProxies di produksi
+
+Fase 7 menambahkan `trustProxies(at: '*')` di `bootstrap/app.php` **hanya** untuk `APP_ENV=local` (uji kamera lewat Cloudflare Tunnel). Kalau domain produksi nanti dipasang di belakang proxy Cloudflare (DNS proxied / awan oranye), setelan itu perlu dilanjutkan di produksi, tapi **bukan dengan `'*'`**:
+
+- `'*'` berarti Laravel mempercayai `X-Forwarded-For` dari siapa pun yang bisa menjangkau origin, jadi `$request->ip()` menjadi nilai yang dikirim penyerang. Akibatnya throttle per IP (`POST /daftar` dan `POST /cari-tiket`, masing-masing `throttle:20,1`) bisa ditembus hanya dengan mengganti-ganti header, dan `registrations.ip_address` + `scan_logs.ip_address` jadi tidak bisa dipercaya saat menelusuri pendaftaran mencurigakan.
+- Yang benar: isi `at:` dengan **daftar rentang IP Cloudflare saja** (IPv4 + IPv6, dari `https://www.cloudflare.com/ips/`), sehingga hanya forwarded header dari Cloudflare yang dipercaya dan `$request->ip()` membaca IP asli peserta. Rentangnya jarang berubah, tapi tetap perlu ditinjau saat deploy.
+- Pastikan juga origin hanya menerima koneksi dari Cloudflare (mis. lewat aturan firewall hosting atau Authenticated Origin Pulls). Kalau origin masih bisa diakses langsung lewat IP-nya, penyerang bisa melewati Cloudflare dan mengirim forwarded header dari alamat lain — daftar rentang tadi tidak menolongnya.
+- Kalau domain produksi **tidak** memakai proxy Cloudflare (DNS abu-abu / langsung ke hosting), jangan aktifkan `trustProxies` sama sekali di produksi: tanpa proxy, `REMOTE_ADDR` sudah IP asli peserta.
+- Daftar isian ini masuk `docs/deploy.md` (checklist Fase 9), berikut cara mengeceknya: buka satu halaman publik lewat domain produksi lalu bandingkan `registrations.ip_address`/`scan_logs.ip_address` dengan IP asli perangkat penguji — kalau yang tercatat adalah IP Cloudflare, `at:` belum benar.
+
+`tests/Feature/TrustedProxyTest.php` hanya menjaga bahwa environment selain `local` tidak mempercayai proxy apa pun; begitu produksi mengisi `at:` dengan rentang Cloudflare, tes itu harus disesuaikan (mis. menguji bahwa forwarded header dari IP di luar rentang tetap diabaikan).
+
 ## Alasan pemisahan
 
 - Tidak ada `Repositories/` atau `Services/` untuk logika bisnis inti — `Actions/` sudah cukup tipis dan eksplisit untuk dua operasi paling kritis (registrasi dan redeem), tanpa lapisan abstraksi tambahan.
