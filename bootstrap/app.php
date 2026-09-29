@@ -19,6 +19,19 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureRole::class,
         ]);
 
+        // Cloudflare Tunnel (uji kamera scanner dari HP) menerima HTTPS di sisi
+        // luar lalu meneruskan ke Laravel sebagai http:// + X-Forwarded-Proto.
+        // Tanpa mempercayai proxy, URL aset ikut http:// dan browser menolak
+        // membuka kamera di halaman campuran.
+        //
+        // HANYA untuk APP_ENV=local. Mempercayai semua proxy di environment
+        // lain berarti X-Forwarded-For apa pun dipercaya, sehingga throttle
+        // per IP (POST /daftar, POST /cari-tiket) bisa ditembus dengan
+        // memalsukan header.
+        if (env('APP_ENV') === 'local') {
+            $middleware->trustProxies(at: '*');
+        }
+
         $middleware->redirectGuestsTo('/login');
         $middleware->redirectUsersTo(fn (Request $request) => $request->user()?->isAdmin() ? '/admin' : '/scanner');
     })

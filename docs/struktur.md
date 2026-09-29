@@ -88,6 +88,7 @@ Catatan penting:
 - **Umpan balik suara + getar**: nada pendek lewat Web Audio API (oscillator, tanpa file audio) dan `navigator.vibrate`, dengan pola berbeda untuk `success`, `already_redeemed`, `not_found`, dan gagal koneksi. Tombol "Suara: nyala/mati" di header, pilihannya disimpan di `localStorage` (`scanner.sound`, sejalan dengan `scanner.mode`). Semua pemanggilannya dibungkus `try/catch` karena browser bisa menolak audio sebelum ada interaksi pengguna.
 - **Pencarian manual nama minimal 3 karakter**, divalidasi di server (`ScanController::MIN_NAME_LENGTH`): di bawah itu responsnya `{result: 'too_short', message: 'Ketik minimal 3 karakter nama.'}` tanpa hasil dan tanpa baris `scan_logs`. Input dianggap nomor HP bila berisi ≥ 7 digit, dan kandidat dibatasi 10 baris supaya layar HP tetap terbaca.
 - **Pemaksaan HTTPS bukan bagian fase ini.** `docs/arsitektur.md` mewajibkan halaman scanner memakai HTTPS; yang ada sekarang hanya peringatan di halaman kalau request tidak `secure()` (kamera memang tidak akan diizinkan browser). Konfigurasi HTTPS-nya masuk `docs/deploy.md` di Fase 9.
+- **Proxy dipercaya HANYA di `APP_ENV=local`** (`bootstrap/app.php`): `if (env('APP_ENV') === 'local') { $middleware->trustProxies(at: '*'); }`. Dibutuhkan untuk menguji kamera dari HP lewat Cloudflare Tunnel — tunnel menerima HTTPS di sisi luar lalu meneruskan `http://` + `X-Forwarded-Proto`, jadi tanpa ini URL aset tetap `http://` dan browser menolak membuka kamera. **Tidak boleh aktif di environment lain**: mempercayai semua proxy berarti `X-Forwarded-For` apa pun dipercaya, sehingga throttle per IP (`POST /daftar`, `POST /cari-tiket`) bisa ditembus dengan memalsukan header. Kondisinya memakai `env()` dan bukan `app()->environment()` karena callback `withMiddleware` berjalan saat kernel HTTP di-resolve, sebelum konfigurasi dimuat; efek sampingnya aman — di server yang memakai `config:cache`, `.env` tidak dimuat sehingga nilainya null dan proxy tetap tidak dipercaya. Dijaga `tests/Feature/TrustedProxyTest.php` (baru, tidak ada di daftar `tests/` awal): di `APP_ENV=testing`, header `X-Forwarded-Proto`/`For`/`Host` harus diabaikan.
 - `tests/Feature/ScanTest.php` menutup: kamera tidak mengubah status, konfirmasi kamera, hardware langsung redeem, redeem kedua (`redeemed_at` tidak berubah), `recent_self` (petugas sama < 2 menit vs petugas lain / > 2 menit), `not_found`, normalisasi kode manual, pencarian nama/HP multi-kandidat, nama < 3 karakter, petugas nonaktif, guest, dan admin.
 
 ```
@@ -211,6 +212,7 @@ tests/
     AuthTest.php                        # login, throttle, akun nonaktif — ditambahkan Fase 2
     AccessControlTest.php               # gating role admin/scanner per rute — ditambahkan Fase 2
     AssetVersionTest.php                # cache busting ?v=filemtime — ditambahkan Fase 4
+    TrustedProxyTest.php                # X-Forwarded-* hanya dipercaya di local — ditambahkan Fase 7
     RegistrationTest.php                # kuota, duplikat email_canonical, HP tidak unik, format
     NotificationJobTest.php
     TicketPageTest.php
