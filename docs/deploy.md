@@ -151,9 +151,33 @@ Untuk sekalian mengganti kata sandi (min. 12 karakter):
 UPDATE users SET is_active = 1 WHERE username = 'NAMA_ADMIN' AND role = 'admin';
 ```
 
-Kata sandi tidak bisa diganti dengan cara ini (hash bcrypt tidak bisa ditulis tangan).
-Kalau lupa kata sandinya, setelah akun aktif kembali login dengan admin lain, atau
-minta admin lain mengubahnya lewat `/admin/users`.
+Kata sandi **bisa** ikut diganti lewat phpMyAdmin, mis. untuk kasus hanya ada satu admin
+dan kata sandinya lupa. Hash bcrypt tidak ditulis tangan, tapi dibuat di laptop:
+
+1. Di laptop (PHP terpasang), buat hash dari kata sandi baru — **minimal 12 karakter**:
+
+   ```bash
+   php -r "echo password_hash('KATA-SANDI-BARU-MIN-12', PASSWORD_BCRYPT), PHP_EOL;"
+   ```
+
+   Hasilnya berawalan `$2y$10$...` (60 karakter). Kalau shell Anda memakai tanda kutip
+   ganda untuk perintah ini dan kata sandinya memuat `$`, `"`, atau `\`, hindari karakter
+   itu supaya tidak terpotong shell.
+
+2. Di phpMyAdmin, tab SQL, tempel hash itu ke `password` sekaligus aktifkan akunnya:
+
+   ```sql
+   UPDATE users
+   SET password = '$2y$10$HASIL-DARI-LANGKAH-1', is_active = 1
+   WHERE username = 'NAMA_ADMIN' AND role = 'admin';
+   ```
+
+   Pastikan hash tertempel utuh (60 karakter, tanpa spasi/baris baru di ujung).
+   Format `$2y$` yang dihasilkan `password_hash` kompatibel dengan `Hash::check` Laravel.
+
+3. Login dengan kata sandi baru, lalu **segera ganti lewat `/admin/users`** (edit akun
+   sendiri) dengan kata sandi yang tidak pernah lewat laptop/riwayat shell. Hapus juga
+   riwayat perintah di laptop kalau kata sandi sementara itu sempat diketik di sana.
 
 Setelah itu login dan pastikan `/admin/users` menampilkan minimal satu admin aktif.
 
