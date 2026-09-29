@@ -62,7 +62,7 @@ Catatan penting:
 ### Penyimpangan disetujui pada Fase 6
 
 - Package baru `chillerlan/php-qrcode:^6.0` (disetujui pemilik proyek; `php: ^8.2`, tanpa Imagick/GD). QR dirender inline sebagai SVG di `TicketController::qrSvg()` dari `token` (bukan kode registrasi, aturan 7). Di v6 output default sudah SVG; warna modul diatur lewat CSS (`.qr-frame .qr-svg .dark`), bukan `moduleValues`.
-- Masking email (`bu***@domain`) dan nomor (`0812-****-7890`) adalah method private di `TicketController`, bukan helper `Support/` baru. Halaman tiket hanya menerima string yang sudah disamarkan; email/nomor utuh tidak pernah sampai ke view.
+- Masking email (`bu***@domain`) dan nomor (`0812-****-7890`) adalah method private di `TicketController`, bukan helper `Support/` baru. *(Dipindah ke `app/Support/ContactMasker.php` setelah review Fase 9 karena kini juga dipakai `LogTicketNotifier`; lihat "Perbaikan keamanan lanjutan".)* Halaman tiket hanya menerima string yang sudah disamarkan; email/nomor utuh tidak pernah sampai ke view.
 - `TicketController::show` mengikat model lewat `{registration:token}` (kolom `token`, tanpa mengubah `getRouteKeyName()`); token tak dikenal otomatis 404. Halaman ini mengirim `<meta name="robots" content="noindex, nofollow">`, `<meta name="referrer" content="no-referrer">`, dan header `X-Robots-Tag: noindex`. Tanggal/lokasi acara disembunyikan jika `event_starts_at`/`venue` masih null (tanpa placeholder), sama seperti Fase 4.
 - Throttle `/cari-tiket` dua lapis: (1) per IP `throttle:20,1` di rute, satu-satunya yang boleh menghasilkan 429 (CGNAT membuat banyak pengguna seluler berbagi IP); (2) per kontak ternormalisasi (`email_canonical` atau `62xxx`) maksimal 3 per jam, lewat `RateLimiter` di `TicketController@search`. Kalau batas kontak terlampaui, respons TETAP pesan netral yang sama persis; hanya dispatch yang dilewati (aturan 11).
 - Kirim ulang lewat `/cari-tiket` mereset `notification_logs` (email + whatsapp) ke `pending` lalu men-dispatch job. Reset wajib karena `SendTicketNotification` sengaja idempoten dan melewati log berstatus `sent`. Untuk pencarian by HP, SEMUA registrasi yang cocok dikirim ulang.
@@ -168,6 +168,7 @@ app/
     RegistrationCodeGenerator.php     # aturan 6 CLAUDE.md
     EmailCanonicalizer.php            # aturan 13 CLAUDE.md
     AssetVersion.php                  # cache busting ?v=filemtime, ditambahkan Fase 4 (lihat catatan)
+    ContactMasker.php                 # samarkan email/nomor HP (halaman tiket + log), ditambahkan review Fase 9
   Enums/
     UserRole.php                      # admin / scanner, ditambahkan Fase 2 (lihat catatan di atas)
     ScanResult.php                    # success / already_redeemed / not_found / cancelled, ditambahkan Fase 7 (cancelled di Fase 8)
@@ -290,6 +291,8 @@ tests/
     AssetVersionTest.php                # cache busting ?v=filemtime — ditambahkan Fase 4
     TrustedProxyTest.php                # X-Forwarded-* hanya dipercaya di local — ditambahkan Fase 7
     DestructiveCommandsTest.php         # migrate:fresh dkk ditolak di production — ditambahkan Fase 8
+    ProductionDebugGuardTest.php        # APP_DEBUG=true ditolak di production — ditambahkan review Fase 9
+    LogTicketNotifierTest.php           # log tanpa email/nomor utuh/token — ditambahkan review Fase 9
     RegistrationTest.php                # kuota, duplikat email_canonical, HP tidak unik, format
     NotificationJobTest.php
     TicketPageTest.php
@@ -314,6 +317,12 @@ Diterapkan setelah review Fase 9; tiap poin punya tes.
 - `POST /login` kini punya `throttle:20,1` per IP di samping throttle username+IP di `LoginController`.
 - `public/.htaccess` mengirim `X-Frame-Options: DENY`. HSTS sengaja belum dipasang (lihat `docs/deploy.md`).
 - `Registration::$fillable` tidak lagi memuat `code`, `token`, `redeemed_*`, `cancelled_*`. `RegisterAttendee` mengisi `code`/`token` lewat `forceFill`; `RedeemRegistration` dan `CancelRegistration` memakai update query bersyarat (tidak lewat fillable). Helper tes memakai `forceCreate`/`forceFill`.
+
+Tiga perbaikan prioritas yang menyusul:
+
+- **`LogTicketNotifier` tidak lagi menulis email utuh, nomor HP utuh, nama, maupun `ticket_url` bertoken ke log.** Konteks log kini hanya `channel`, `registration_id`, `code`, dan `destination` tersamar (`bu***@gmail.com`, `0812-****-7890`). Siapa pun yang bisa membaca `storage/logs` sebelumnya bisa membuka tiket peserta. Masking dipindah dari method private `TicketController` (catatan Fase 6) ke helper baru **`app/Support/ContactMasker.php`** supaya halaman tiket dan log memakai format yang sama; perilaku halaman tiket tidak berubah. Tes: `tests/Feature/LogTicketNotifierTest.php` (baru).
+- **Turnstile di `StoreRegistrationRequest`**: `ConnectionException` (Cloudflare tidak terjangkau, termasuk timeout cURL 28) ditangkap dan menjadi error validasi `cf-turnstile-response` "Verifikasi keamanan gagal, silakan coba lagi." dengan `back()->withInput()`, bukan 500. `timeout` dan `connectTimeout` diturunkan ke **5 detik** (sebelumnya 10). Pesan untuk verifikasi yang ditolak Cloudflare ("Verifikasi keamanan gagal. Coba lagi.") tidak diubah. Tes: dua tes baru di `RegistrationTest.php` (`Http::fake` yang melempar `ConnectionException`, dan jalur sukses).
+- **Pengaman `APP_DEBUG` di produksi**: `AppServiceProvider::boot()` → `refuseDebugInProduction()`. Bila `APP_ENV=production` dan `APP_DEBUG=true`, request web ditolak dengan `RuntimeException` berpesan jelas ("Konfigurasi tidak aman: APP_DEBUG=true tidak boleh dipakai saat APP_ENV=production …") yang tercatat di `storage/logs`. Sebelum melempar, `app.debug` dimatikan dulu supaya pengunjung melihat halaman 500 biasa, bukan halaman debug. Hanya berlaku di `production`; `local` (termasuk lewat Cloudflare Tunnel `*.trycloudflare.com`) dan `testing` tidak tersentuh. **Artisan/cron sengaja tidak diblokir**, supaya `php artisan config:clear` tetap bisa dipakai jika `config:cache` terlanjur berisi `debug=true` (di hosting tanpa SSH: hapus `bootstrap/cache/config.php`). Tes: `tests/Feature/ProductionDebugGuardTest.php` (baru).
 
 ### Risiko yang diterima (keputusan pemilik proyek)
 

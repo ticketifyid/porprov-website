@@ -9,7 +9,9 @@ use App\Models\Regency;
 use App\Models\Registration;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use PDOException;
 use Tests\TestCase;
@@ -274,6 +276,39 @@ class RegistrationTest extends TestCase
         $this->event->update(['registration_open_at' => now()->addDay()]);
 
         $this->get('/daftar')->assertOk()->assertSeeText('Pendaftaran belum dibuka');
+    }
+
+    // ------------------------------------------------------------ turnstile
+
+    public function test_turnstile_tidak_terjangkau_menjadi_error_validasi_bukan_500(): void
+    {
+        config(['services.turnstile.enabled' => true, 'services.turnstile.secret_key' => 'rahasia']);
+
+        Http::fake(fn () => throw new ConnectionException('cURL error 28: Operation timed out after 5001 milliseconds'));
+
+        $response = $this->post('/daftar', $this->payload(['cf-turnstile-response' => 'token-widget']));
+
+        $response->assertRedirect('/daftar');
+        $response->assertSessionHasErrors([
+            'cf-turnstile-response' => 'Verifikasi keamanan gagal, silakan coba lagi.',
+        ]);
+        $response->assertSessionHasInput('name', 'Budi Santoso');
+
+        $this->assertSame(0, Registration::count());
+        $this->assertSame(0, $this->event->fresh()->tickets_taken);
+    }
+
+    public function test_turnstile_sukses_meneruskan_pendaftaran(): void
+    {
+        Queue::fake();
+        config(['services.turnstile.enabled' => true, 'services.turnstile.secret_key' => 'rahasia']);
+
+        Http::fake(['challenges.cloudflare.com/*' => Http::response(['success' => true])]);
+
+        $this->post('/daftar', $this->payload(['cf-turnstile-response' => 'token-widget']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(1, Registration::count());
     }
 
     // -------------------------------------------------------------- sukses

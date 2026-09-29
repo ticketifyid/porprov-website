@@ -7,6 +7,7 @@ use App\Support\EmailCanonicalizer;
 use App\Support\PhoneNormalizer;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 
@@ -178,13 +179,23 @@ class StoreRegistrationRequest extends FormRequest
             return;
         }
 
-        $response = Http::asForm()
-            ->timeout(10)
-            ->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
-                'secret' => config('services.turnstile.secret_key'),
-                'response' => $token,
-                'remoteip' => $this->ip(),
-            ]);
+        // Cloudflare tidak terjangkau / timeout (ConnectionException, termasuk
+        // cURL error 28) menjadi error validasi biasa, bukan 500. Timeout 5
+        // detik supaya worker PHP shared hosting tidak tertahan lama.
+        try {
+            $response = Http::asForm()
+                ->timeout(5)
+                ->connectTimeout(5)
+                ->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
+                    'secret' => config('services.turnstile.secret_key'),
+                    'response' => $token,
+                    'remoteip' => $this->ip(),
+                ]);
+        } catch (ConnectionException) {
+            $validator->errors()->add('cf-turnstile-response', 'Verifikasi keamanan gagal, silakan coba lagi.');
+
+            return;
+        }
 
         if (! $response->successful() || $response->json('success') !== true) {
             $validator->errors()->add('cf-turnstile-response', 'Verifikasi keamanan gagal. Coba lagi.');

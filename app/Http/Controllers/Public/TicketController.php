@@ -6,6 +6,7 @@ use App\Actions\ResendTicketNotifications;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\SearchTicketRequest;
 use App\Models\Registration;
+use App\Support\ContactMasker;
 use Carbon\CarbonInterface;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
@@ -43,8 +44,8 @@ class TicketController extends Controller
             'regencyName' => $registration->regency->name,
             'code' => $registration->code,
             'ticketQty' => $registration->ticket_qty,
-            'maskedEmail' => $this->maskEmail($registration->email),
-            'maskedPhone' => $this->maskPhone($registration->phone),
+            'maskedEmail' => ContactMasker::email($registration->email),
+            'maskedPhone' => ContactMasker::phone($registration->phone),
             'isRedeemed' => $registration->redeemed_at !== null,
             'redeemedAtLabel' => $registration->redeemed_at?->locale('id')->translatedFormat('H.i'),
             'eventStartsAt' => $this->formatDateTime($event->event_starts_at),
@@ -117,41 +118,6 @@ class TicketController extends Controller
         ]);
 
         return (new QRCode($options))->render($token);
-    }
-
-    /**
-     * Dua karakter pertama local-part + "***" + "@domain".
-     *
-     * Contoh artboard: bu***@email.com
-     */
-    private function maskEmail(string $email): string
-    {
-        $atPos = strrpos($email, '@');
-
-        if ($atPos === false) {
-            return $email;
-        }
-
-        $local = substr($email, 0, $atPos);
-        $domain = substr($email, $atPos + 1);
-        $visible = mb_substr($local, 0, 2);
-
-        return $visible.'***@'.$domain;
-    }
-
-    /**
-     * 62xxxxxxxxxx -> 0xxxxxxxxxx -> {4 digit awal}-****-{4 digit akhir}
-     * (contoh artboard: 0812-****-7890).
-     */
-    private function maskPhone(string $phone): string
-    {
-        $local = str_starts_with($phone, '62') ? '0'.substr($phone, 2) : $phone;
-
-        if (mb_strlen($local) < 8) {
-            return $local;
-        }
-
-        return mb_substr($local, 0, 4).'-****-'.mb_substr($local, -4);
     }
 
     private function formatDateTime(?CarbonInterface $dateTime): ?string
