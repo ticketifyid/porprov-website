@@ -418,6 +418,72 @@ input, select, textarea {
   padding: 0 12px;
 }
 
+/* ---------- Combobox Domisili (regency-combobox.js) ----------
+   Tidak ada di artboard (artboard memakai select biasa). Kotak input memakai
+   gaya .field input yang sama (tinggi 50px, border 1.5px --input-border,
+   radius 12px); daftar pilihan hanya memakai token yang sudah ada. */
+
+.combobox {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.combobox__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  max-height: min(40vh, 320px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  background: var(--surface);
+  border: 1.5px solid var(--input-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(11, 27, 63, 0.12);
+}
+
+.combobox__list[hidden] {
+  display: none;
+}
+
+.combobox__option {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 16px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.combobox__option:hover {
+  background: var(--ground);
+}
+
+.combobox__option.is-active {
+  background: var(--info-bg);
+  color: var(--info-ink);
+}
+
+.combobox__option[aria-selected="true"] {
+  font-weight: 700;
+}
+
+.combobox__empty {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
 .field__helper {
   font-size: 13px;
   color: var(--muted);

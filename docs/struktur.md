@@ -195,6 +195,17 @@ Perbaikan form `/daftar` sebelum pendaftaran resmi dibuka: Turnstile, captcha ga
 - **`scripts/uji-war-kuota.php`** mengisi `daftar_form_rendered_at` di session tiap proses pendaftar (setelah `$kernel->bootstrap()`), supaya uji war kuota tidak tertolak waktu isi minimum.
 - **Tes**: `tests/Feature/CaptchaTest.php` (baru: gambar, alfabet, FreeType + fallback, jalur captcha, sekali pakai, kedaluwarsa, throttle per sesi/IP untuk percobaan dan gambar, termasuk sesi lain dari IP sama tidak ikut terblokir), `tests/Feature/NotificationChannelTextTest.php` (baru), tambahan di `RegistrationTest.php` (honeypot, waktu isi, tombol, halaman perbaikan, `verified_via`) dan `Admin/RegistrationAdminTest.php` (filter). `RegistrationTest::setUp()` mengisi cap waktu render di session. `NotificationJobTest`'s `FakeTicketNotifier` dan pesan netral `TicketPageTest` disesuaikan.
 
+### Penyimpangan disetujui: Domisili bisa dicari
+
+- **Penyimpangan desain**: artboard `Form` / `DesktopForm` memakai `<select>` biasa untuk Domisili. Atas permintaan pemilik proyek, di mobile dan desktop select itu diganti **combobox yang bisa dicari** (`public/js/regency-combobox.js`, vanilla JS lewat `@versionedAsset`, tanpa library).
+- **Progressive enhancement**: `<select name="regency_id" data-combobox>` tetap dirender lengkap (36 pilihan + "Pilih kabupaten/kota") sebagai sumber data, nilai yang dikirim, dan fallback tanpa JS. Saat JS berjalan, select diberi `hidden` + `tabindex=-1` + `aria-hidden`, id-nya dipindah ke `regency_id-native`, dan input combobox mengambil id `regency_id` supaya `<label for>` tetap menunjuk ke kotak yang terlihat. Pesan error server (`.field__error`) dihubungkan lewat `aria-invalid` + `aria-describedby`.
+- **Pencarian**: tidak peka huruf besar-kecil; awalan `Kab.` / `Kabupaten` / `Kota` diabaikan ("semarang" → Kab. Semarang + Kota Semarang), tetapi jika diketik ikut mempersempit ("kota tegal" → Kota Tegal). Opsi bertanda `data-combobox-always` (hanya "Luar Jawa Tengah", ditandai di `form.blade.php` berdasarkan namanya) **selalu tampil di akhir daftar**, supaya peserta dari luar provinsi yang mengetik kotanya sendiri (mis. "jakarta") tetap menemukannya. "Tidak ditemukan" tampil bila tidak ada satu pun yang cocok (termasuk "Luar Jawa Tengah").
+- **Perilaku**: fokus membuka seluruh daftar dengan pilihan saat ini tersorot; memilih (klik/Enter) mengisi `select.value` dan menampilkan nama lengkap. Saat keluar dari field, teks yang sama persis dengan salah satu nama dipilih otomatis; selain itu select **dan** input dikosongkan supaya validasi server "Domisili wajib dipilih." menangkapnya. Nilai `old('regency_id')` tampil di input saat halaman dimuat ulang setelah error validasi.
+- **ARIA & keyboard**: `role="combobox"`, `aria-autocomplete="list"`, `aria-expanded`, `aria-controls`, `aria-activedescendant`; daftar `role="listbox"` berisi `role="option"` + `aria-selected`. Panah atas/bawah memindah sorotan, Enter memilih (tidak mengirim form selama daftar terbuka), Escape menutup. `mousedown` pada daftar di-`preventDefault` supaya input tidak blur sebelum klik diproses.
+- **Mobile**: tinggi daftar maksimal `min(40vh, 320px)` dengan scroll di dalamnya (`overscroll-behavior: contain`), dan pada lebar ≤ 991px field digulir ke atas layar 300 ms setelah fokus (menunggu keyboard layar). Setiap pilihan minimal 44px.
+- **CSS**: bagian "Combobox Domisili" di `public/css/app.css`. Kotak input memakai gaya `.field input` yang sudah ada (tinggi 50px, border 1.5px `--input-border`, radius 12px, 16px); daftar memakai `--surface`, `--input-border`, `--ground` (hover), `--info-bg`/`--info-ink` (sorotan), `--muted` ("Tidak ditemukan"), radius 12px. Bayangan daftar `0 8px 24px rgba(11, 27, 63, 0.12)` (warna `--ink`) tidak ada di `DESIGN.md`.
+- **Tes**: `tests/Feature/RegencyComboboxTest.php` (baru) — select tetap memuat 36 pilihan berurutan `sort_order` + pilihan kosong, "Luar Jawa Tengah" bertanda `data-combobox-always`, skrip dimuat, dan `old('regency_id')` terpilih setelah error validasi. Perilaku JS (ARIA, pencarian, keyboard, blur, klik) diperiksa manual lewat Chrome headless; tidak ada tes JS otomatis karena proyek ini tanpa tooling Node.
+
 ```
 app/
   Actions/
@@ -321,6 +332,7 @@ public/
     stepper.js
     email-domain.js
     verification.js                     # tombol Daftar menunggu Turnstile + panel captcha cadangan
+    regency-combobox.js                 # Domisili bisa dicari (combobox ARIA di atas select asli)
     scanner.js                          # inti halaman scanner (Fase 7)
     scanner-hardware.js
     scanner-camera.js
@@ -349,6 +361,7 @@ tests/
     MailTicketNotifierTest.php          # email asli + sanitasi last_error — ditambahkan Fase 10
     CaptchaTest.php                     # captcha gambar + throttle — perbaikan pra-pembukaan
     NotificationChannelTextTest.php     # teks "email" vs "email dan WhatsApp" — perbaikan pra-pembukaan
+    RegencyComboboxTest.php             # select Domisili tetap lengkap + old() terpilih
     TicketPageTest.php
     ScanTest.php
     Admin/

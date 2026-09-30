@@ -113,10 +113,14 @@
                         <x-field label="Nama lengkap" name="name" :span2="true" placeholder="Nama lengkap Anda"
                                  autocomplete="name" maxlength="150" value="{{ old('name') }}" />
 
-                        <x-field label="Domisili" name="regency_id" type="select">
+                        {{-- Select asli tetap sumber data + fallback tanpa JS;
+                             regency-combobox.js menggantinya dengan dropdown
+                             yang bisa dicari. --}}
+                        <x-field label="Domisili" name="regency_id" type="select" data-combobox>
                             <option value="">Pilih kabupaten/kota</option>
                             @foreach ($regencies as $regency)
-                                <option value="{{ $regency->id }}" @selected((int) old('regency_id') === $regency->id)>{{ $regency->name }}</option>
+                                <option value="{{ $regency->id }}" @selected((int) old('regency_id') === $regency->id)
+                                        @if ($regency->name === 'Luar Jawa Tengah') data-combobox-always @endif>{{ $regency->name }}</option>
                             @endforeach
                         </x-field>
 
@@ -202,6 +206,7 @@
         <script src="@versionedAsset('js/verification.js')"></script>
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer onerror="porprovTurnstileLoadFailed()"></script>
     @endif
+    <script src="@versionedAsset('js/regency-combobox.js')"></script>
     <script src="@versionedAsset('js/email-domain.js')"></script>
     <script src="@versionedAsset('js/stepper.js')"></script>
 @endpush
