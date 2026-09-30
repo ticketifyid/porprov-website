@@ -346,6 +346,15 @@ function pendaftar(string $root, int $index, float $mulai): int
 
     $kernel = $app->make(\Illuminate\Contracts\Http\Kernel::class);
 
+    // Waktu isi minimum (3 detik sejak GET /daftar, dicatat di sesi): proses
+    // ini tidak pernah membuka form, jadi cap waktunya diisi langsung. Store
+    // sesi memakai atribut yang sudah ada saat middleware memulai sesi.
+    $kernel->bootstrap();
+    $app['session.store']->put(
+        \App\Http\Requests\Public\StoreRegistrationRequest::RENDERED_AT_KEY,
+        time() - 60,
+    );
+
     $qty = 1 + ($index % 4);
 
     $request = \Illuminate\Http\Request::create('/daftar', 'POST', [

@@ -85,6 +85,38 @@ class RegistrationAdminTest extends TestCase
             ->assertOk()->assertSee($registration->name);
     }
 
+    public function test_daftar_peserta_menampilkan_dan_menyaring_jalur_verifikasi(): void
+    {
+        $turnstile = $this->makeRegistration(['name' => 'Peserta Turnstile', 'verified_via' => 'turnstile']);
+        $captcha = $this->makeRegistration(['name' => 'Peserta Captcha', 'verified_via' => 'captcha']);
+        $none = $this->makeRegistration(['name' => 'Peserta Lama']);
+
+        $this->actingAs($this->admin)->get('/admin/registrations')
+            ->assertOk()
+            ->assertSeeText('Verifikasi')
+            ->assertSee('<option value="captcha"', false)
+            ->assertSee($turnstile->code)->assertSee($captcha->code)->assertSee($none->code);
+
+        $this->actingAs($this->admin)->get('/admin/registrations?via=captcha')
+            ->assertOk()
+            ->assertSee($captcha->code)
+            ->assertDontSee($turnstile->code)
+            ->assertDontSee($none->code)
+            ->assertSee('<option value="captcha" selected', false);
+
+        $this->actingAs($this->admin)->get('/admin/registrations?via=turnstile&q=Peserta')
+            ->assertOk()
+            ->assertSee($turnstile->code)
+            ->assertDontSee($captcha->code);
+
+        // Nilai tak dikenal diabaikan, bukan error.
+        $this->actingAs($this->admin)->get('/admin/registrations?via=xss')
+            ->assertOk()->assertSee($none->code);
+
+        $this->actingAs($this->admin)->get('/admin/registrations/'.$captcha->id)
+            ->assertOk()->assertSeeText('Captcha gambar');
+    }
+
     // ---------- pembatalan ----------
 
     public function test_pembatalan_mengembalikan_kuota_dalam_transaksi(): void

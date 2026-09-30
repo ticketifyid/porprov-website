@@ -1594,6 +1594,95 @@ input, select, textarea {
   }
 }
 
+/* ---------- Verifikasi keamanan: tunggu token, captcha cadangan, honeypot ----------
+   Tidak ada di artboard; hanya memakai token yang sudah ada. */
+
+.submit-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.verify-wait {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.verify-wait[hidden] {
+  display: none;
+}
+
+.captcha-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+
+.captcha-panel[hidden] {
+  display: none;
+}
+
+.captcha-panel__hint {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.captcha-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.captcha-panel__image {
+  display: block;
+  width: 220px;
+  max-width: 60%;
+  height: auto;
+  border: 1.5px solid var(--input-border);
+  border-radius: 12px;
+  background: #FFFFFF;
+}
+
+.captcha-panel__refresh {
+  width: auto;
+  height: 44px;
+}
+
+.captcha-panel .field label {
+  color: var(--ink);
+}
+
+.captcha-panel .field input {
+  text-transform: uppercase;
+  letter-spacing: 4px;
+}
+
+.hp-field {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+@media (min-width: 992px) {
+  .submit-stack {
+    align-items: center;
+  }
+
+  .captcha-panel__retry {
+    width: auto;
+    align-self: flex-start;
+  }
+}
+
 .form-consent {
   font-size: 13px;
   line-height: 1.5;

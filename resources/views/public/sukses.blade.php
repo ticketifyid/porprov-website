@@ -20,7 +20,7 @@
                 </div>
 
                 <h1 class="h1-page">Pendaftaran berhasil</h1>
-                <p class="card__body">E-ticket sudah dikirim ke email dan WhatsApp Anda. Jika belum masuk dalam beberapa menit, cek folder spam.</p>
+                <p class="card__body">E-ticket sudah dikirim ke {{ $ticketChannels }} Anda. Jika belum masuk dalam beberapa menit, cek folder spam.</p>
 
                 <div class="summary-box">
                     <div class="summary-box__col">

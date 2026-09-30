@@ -25,4 +25,11 @@ interface TicketNotifier
 
     /** @return string|null provider message id; lempar exception jika gagal */
     public function sendWhatsApp(Registration $registration): ?string;
+
+    /**
+     * true hanya jika sendWhatsApp() benar-benar mengirim pesan WhatsApp
+     * (bukan diteruskan ke LogTicketNotifier). Menentukan teks kanal di
+     * halaman peserta: "email" saja, atau "email dan WhatsApp".
+     */
+    public function deliversWhatsApp(): bool;
 }

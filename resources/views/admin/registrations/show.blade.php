@@ -18,7 +18,8 @@
             <p class="text-muted mb-1">Kab/Kota: {{ $registration->regency?->name }}</p>
             <p class="text-muted mb-1">Email: {{ $registration->email }}</p>
             <p class="text-muted mb-1">No. HP: {{ $registration->phone }}</p>
-            <p class="text-muted mb-3">Jumlah tiket: {{ $registration->ticket_qty }}</p>
+            <p class="text-muted mb-1">Jumlah tiket: {{ $registration->ticket_qty }}</p>
+            <p class="text-muted mb-3">Verifikasi: {{ \App\Models\Registration::VERIFIED_VIA[$registration->verified_via] ?? '—' }}</p>
 
             <p class="mb-0">
                 @if ($registration->cancelled_at)

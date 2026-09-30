@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Public;
 
 use App\Models\Event;
+use App\Services\ImageCaptcha;
 use App\Support\EmailCanonicalizer;
 use App\Support\PhoneNormalizer;
 use Illuminate\Contracts\Validation\Validator;
@@ -25,6 +26,28 @@ class StoreRegistrationRequest extends FormRequest
      * Pesan tunggal untuk Turnstile gagal (koneksi gagal maupun token ditolak).
      */
     private const TURNSTILE_FAILED = 'Verifikasi keamanan gagal, silakan coba lagi.';
+
+    /**
+     * Waktu minimum (detik) antara form dirender (session, diukur server)
+     * dan dikirim. Berlaku untuk kedua jalur verifikasi.
+     */
+    public const MIN_FILL_SECONDS = 3;
+
+    /**
+     * Kunci session waktu form dirender, diisi HomeController::form().
+     */
+    public const RENDERED_AT_KEY = 'daftar_form_rendered_at';
+
+    /**
+     * Kolom jebakan yang disembunyikan dari manusia.
+     */
+    public const HONEYPOT = 'website';
+
+    /**
+     * Jalur verifikasi yang lolos: 'turnstile', 'captcha', atau null jika
+     * Turnstile dimatikan.
+     */
+    private ?string $verifiedVia = null;
 
     public function authorize(): bool
     {
@@ -140,7 +163,11 @@ class StoreRegistrationRequest extends FormRequest
     protected function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            $this->verifyTurnstile($validator);
+            // Bot yang terjebak honeypot/waktu tidak perlu diverifikasi lebih
+            // lanjut (tidak memanggil Cloudflare, tidak menghabiskan captcha).
+            if ($this->passesBotTraps($validator)) {
+                $this->verifyHuman($validator);
+            }
 
             foreach (['email', 'email_canonical'] as $key) {
                 foreach ($validator->errors()->get($key) as $message) {
@@ -168,10 +195,45 @@ class StoreRegistrationRequest extends FormRequest
     }
 
     /**
-     * Verifikasi Cloudflare Turnstile. Di environment testing (dan saat
-     * TURNSTILE_ENABLED=false) verifikasi dilewati lewat config.
+     * Jalur verifikasi yang lolos, untuk kolom registrations.verified_via.
      */
-    private function verifyTurnstile(Validator $validator): void
+    public function verifiedVia(): ?string
+    {
+        return $this->verifiedVia;
+    }
+
+    /**
+     * Honeypot dan waktu isi minimum. Berlaku untuk jalur Turnstile maupun
+     * captcha, juga saat TURNSTILE_ENABLED=false.
+     */
+    private function passesBotTraps(Validator $validator): bool
+    {
+        $honeypot = $this->input(self::HONEYPOT);
+
+        if ($honeypot !== null && $honeypot !== '') {
+            Log::info('Pendaftaran ditolak: honeypot terisi', ['ip' => $this->ip()]);
+            $validator->errors()->add('form', 'Pendaftaran tidak dapat diproses. Silakan coba lagi.');
+
+            return false;
+        }
+
+        $renderedAt = $this->session()->get(self::RENDERED_AT_KEY);
+
+        if (! is_int($renderedAt) || now()->getTimestamp() - $renderedAt < self::MIN_FILL_SECONDS) {
+            $validator->errors()->add('form', 'Mohon tunggu sebentar, lalu tekan Daftar lagi.');
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Token Turnstile didahulukan; captcha gambar hanya dipakai jika token
+     * kosong. Di environment testing (dan saat TURNSTILE_ENABLED=false)
+     * verifikasi dilewati lewat config.
+     */
+    private function verifyHuman(Validator $validator): void
     {
         if (! config('services.turnstile.enabled')) {
             return;
@@ -179,12 +241,57 @@ class StoreRegistrationRequest extends FormRequest
 
         $token = $this->input('cf-turnstile-response');
 
-        if (! is_string($token) || $token === '') {
-            $validator->errors()->add('cf-turnstile-response', 'Verifikasi keamanan belum selesai. Coba lagi.');
+        if (is_string($token) && $token !== '') {
+            if ($this->verifyTurnstile($validator, $token)) {
+                $this->verifiedVia = 'turnstile';
+            }
 
             return;
         }
 
+        $captcha = $this->input('captcha');
+
+        if (is_string($captcha) && trim($captcha) !== '') {
+            if ($this->verifyCaptcha($validator, $captcha)) {
+                $this->verifiedVia = 'captcha';
+            }
+
+            return;
+        }
+
+        $validator->errors()->add('cf-turnstile-response', 'Verifikasi keamanan belum selesai. Coba lagi.');
+    }
+
+    private function verifyCaptcha(Validator $validator, string $input): bool
+    {
+        $captcha = app(ImageCaptcha::class);
+
+        if ($captcha->attemptsExceeded((string) $this->ip(), $this->session()->getId())) {
+            // Jawaban lama tetap dihanguskan supaya tidak bisa dicoba nanti.
+            $captcha->verify('');
+            $validator->errors()->add('captcha', 'Terlalu banyak percobaan kode. Tunggu 10 menit, atau tekan Ulangi verifikasi.');
+
+            return false;
+        }
+
+        $result = $captcha->verify($input);
+
+        if ($result === ImageCaptcha::OK) {
+            return true;
+        }
+
+        $validator->errors()->add('captcha', $result === ImageCaptcha::EXPIRED
+            ? 'Kode sudah kedaluwarsa. Tekan Ganti gambar, lalu ketik kode yang baru.'
+            : 'Kode tidak sesuai. Ketik ulang kode pada gambar baru.');
+
+        return false;
+    }
+
+    /**
+     * Verifikasi token Cloudflare Turnstile.
+     */
+    private function verifyTurnstile(Validator $validator, string $token): bool
+    {
         // Cloudflare tidak terjangkau / timeout (ConnectionException, termasuk
         // cURL error 28) menjadi error validasi biasa, bukan 500. Timeout 5
         // detik supaya worker PHP shared hosting tidak tertahan lama.
@@ -206,7 +313,7 @@ class StoreRegistrationRequest extends FormRequest
 
             $validator->errors()->add('cf-turnstile-response', self::TURNSTILE_FAILED);
 
-            return;
+            return false;
         }
 
         // Pesan ke pengguna sama untuk koneksi gagal dan token ditolak;
@@ -219,6 +326,10 @@ class StoreRegistrationRequest extends FormRequest
             ]);
 
             $validator->errors()->add('cf-turnstile-response', self::TURNSTILE_FAILED);
+
+            return false;
         }
+
+        return true;
     }
 }

@@ -176,6 +176,23 @@ Catatan penting:
   `MAIL_ENCRYPTION`).
 - **`tests/Feature/MailTicketNotifierTest.php`** (baru). Tes lama tidak diubah.
 
+### Penyimpangan disetujui: perbaikan form pra-pembukaan
+
+Perbaikan form `/daftar` sebelum pendaftaran resmi dibuka: Turnstile, captcha gambar cadangan, honeypot + waktu isi minimum, dan teks kanal notifikasi.
+
+- **Tombol Daftar menunggu verifikasi.** Saat Turnstile aktif (enabled + site key ada), tombol dirender `disabled` dengan teks "Menunggu verifikasi keamanan…". `public/js/verification.js` (baru, lewat `@versionedAsset`, dimuat **sebelum** `api.js` karena callback `data-callback` / `data-expired-callback` / `data-error-callback` dan `onerror` memanggil fungsi global dari file ini) mengaktifkan tombol jika ada token Turnstile ATAU captcha terisi 5 karakter; token kedaluwarsa → nonaktif lagi. `TURNSTILE_ENABLED=false` → tombol langsung aktif, widget dan panel captcha tidak dirender.
+- **Pengaman produksi** di `HomeController::form()`: `APP_ENV=production` + Turnstile aktif + site key atau secret key kosong → `Log::error` yang menyebut `TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` (dibatasi sekali per 10 menit lewat `Cache::add`) dan halaman Status kondisi baru `perbaikan` ("Pendaftaran sedang dalam perbaikan", ikon `warning`, HTTP 503). `POST /daftar` tidak diberi penjaga terpisah: tanpa secret verifikasi pasti gagal dan redirect kembali ke halaman ini.
+- **Captcha gambar cadangan** — `app/Services/ImageCaptcha.php` (baru, di `Services/` bukan `Support/` karena memakai session, `RateLimiter`, dan GD). 5 karakter `random_int` dari `ABCDEFGHJKMNPQRSTUVWXYZ23456789` (tanpa 0/O/1/I/L); jawaban disimpan di session `daftar_captcha` sebagai HMAC (bukan teks), sekali pakai (`session()->pull()` apa pun hasilnya), kedaluwarsa 5 menit. Kunci session sengaja datar (`daftar_captcha`, `daftar_form_rendered_at`), bukan `daftar.*` bertingkat, karena array bertingkat di session ditimpa utuh saat dimuat ulang.
+  - Render: FreeType `imagettftext` dengan **`resources/fonts/DejaVuSans-Bold.ttf`** (folder baru; lisensi Bitstream Vera/DejaVu, bebas didistribusikan, disertakan di `resources/fonts/DejaVu-LICENSE.txt`). Tiap karakter diputar acak −25…25°, ukuran 20–25 pt, posisi vertikal bergeser; ditambah bintik latar dan 5 garis noise. Kanvas 220×70. Jika FreeType atau file font tidak ada, jatuh ke `imagestring` bawaan GD (diperbesar ×3) dan mencatat `Log::warning`. Tanpa package Composer baru.
+  - Rute **`GET /daftar/captcha`** → `RegistrationController@captcha` (bukan controller baru, mengikuti preseden `success()`), `image/png`, `Cache-Control: no-store`. Setiap permintaan membuat kode baru. Throttle limiter bernama `daftar-captcha-image` di `AppServiceProvider::boot()`: **20/menit per sesi** dan **120/menit per IP** (longgar karena CGNAT).
+  - Panel di bawah widget berisi petunjuk jam otomatis / buka di Chrome-Safari, gambar (src baru diisi saat panel dibuka, jadi pengguna normal tidak pernah membuat captcha), tombol "Ganti gambar", input kode, dan tombol "Ulangi verifikasi" (`turnstile.reset()`). Panel dibuka oleh `data-error-callback`, oleh `onerror` script `api.js`, atau jika `window.turnstile` belum ada setelah 15 detik (script diblokir di browser dalam aplikasi tanpa memicu `onerror`); dua kasus terakhir menyembunyikan "Ulangi verifikasi". Form yang kembali dengan error `captcha` membuka panel langsung dengan gambar baru.
+- **Verifikasi server** di `StoreRegistrationRequest::withValidator()`, urutannya: (1) honeypot `website` terisi → error bag `form` "Pendaftaran tidak dapat diproses. Silakan coba lagi." + `Log::info`; (2) waktu isi: `daftar_form_rendered_at` di session (diisi `HomeController::form()` hanya jika belum ada, tidak direset saat form dibuka ulang atau setelah sukses) tidak ada atau < 3 detik → "Mohon tunggu sebentar, lalu tekan Daftar lagi."; keduanya berlaku walau Turnstile dimatikan, dan bila kena, Cloudflare tidak dipanggil dan captcha tidak dihanguskan; (3) token Turnstile ada → verifikasi Cloudflare seperti sebelumnya (`verified_via = turnstile`); token kosong + `captcha` terisi → throttle **5 per 10 menit per sesi** dan **30 per 10 menit per IP**, lalu `ImageCaptcha::verify` (`verified_via = captcha`), error di key `captcha`; keduanya kosong → pesan lama. Semua kegagalan kembali ke form dengan `withInput()` (throttle captcha sengaja error validasi, bukan 429). Catatan: throttle rute `POST /daftar` (`throttle:20,1` per IP) tidak diubah.
+- **`registrations.verified_via`** lewat migration baru `2024_01_01_000008_add_verified_via_to_registrations_table.php` (lihat `docs/erd.md`). Tidak fillable — diisi `RegisterAttendee` lewat `forceFill` dari `StoreRegistrationRequest::verifiedVia()`. Label di `Registration::VERIFIED_VIA`. Admin: kolom "Verifikasi" dan filter `?via=turnstile|captcha` (nilai lain diabaikan) di daftar peserta, juga tampil di detail.
+- **Teks kanal notifikasi**: `App\Contracts\TicketNotifier` menambah `deliversWhatsApp(): bool` (keputusan pemilik proyek; `LogTicketNotifier` dan `MailTicketNotifier` → `false`). View composer `public.*` di `AppServiceProvider::boot()` membagikan `$ticketChannels` ("email" / "email dan WhatsApp") dan `$whatsappActive`. Dipakai di beranda, form (panel langkah, subjudul, helper nomor HP), halaman sukses, dan cari tiket (petunjuk + pesan netral). Label field "Nomor WhatsApp" tetap. Template email tidak menyebut WhatsApp. `_styleguide` dibiarkan statis.
+- **CSS**: bagian baru di `public/css/app.css` (`.submit-stack`, `.verify-wait`, `.captcha-panel*`, `.hp-field`). Elemen ini tidak ada di artboard; hanya memakai token yang sudah ada (`--warn-bg`/`--warn-ink` untuk panel, `--muted` untuk teks tunggu).
+- **`scripts/uji-war-kuota.php`** mengisi `daftar_form_rendered_at` di session tiap proses pendaftar (setelah `$kernel->bootstrap()`), supaya uji war kuota tidak tertolak waktu isi minimum.
+- **Tes**: `tests/Feature/CaptchaTest.php` (baru: gambar, alfabet, FreeType + fallback, jalur captcha, sekali pakai, kedaluwarsa, throttle per sesi/IP untuk percobaan dan gambar, termasuk sesi lain dari IP sama tidak ikut terblokir), `tests/Feature/NotificationChannelTextTest.php` (baru), tambahan di `RegistrationTest.php` (honeypot, waktu isi, tombol, halaman perbaikan, `verified_via`) dan `Admin/RegistrationAdminTest.php` (filter). `RegistrationTest::setUp()` mengisi cap waktu render di session. `NotificationJobTest`'s `FakeTicketNotifier` dan pesan netral `TicketPageTest` disesuaikan.
+
 ```
 app/
   Actions/
@@ -198,13 +215,14 @@ app/
     Notifications/
       LogTicketNotifier.php           # implementasi default (TICKET_NOTIFIER=log)
       MailTicketNotifier.php          # TICKET_NOTIFIER=mail: email asli, WA masih log (Fase 10)
+    ImageCaptcha.php                  # captcha gambar cadangan Turnstile (GD + FreeType), perbaikan pra-pembukaan
   Mail/
     TicketMail.php                    # Mailable e-ticket (Fase 10)
   Http/
     Controllers/
       Public/
         HomeController.php            # / , /daftar (GET)
-        RegistrationController.php    # POST /daftar, panggil RegisterAttendee
+        RegistrationController.php    # POST /daftar (panggil RegisterAttendee), /daftar/sukses/{token}, /daftar/captcha
         TicketController.php          # /tiket/{token}, /cari-tiket
       Scanner/
         ScanController.php            # GET /scanner, POST /scan, /scan/cari, /scan/{registration}/redeem; panggil RedeemRegistration
@@ -249,6 +267,7 @@ database/
     ..._create_scan_logs_table.php
     ..._add_cancellation_to_registrations_table.php  # cancelled_at, cancelled_by, email_canonical->nullable, ditambahkan Fase 8
     ..._add_cancelled_to_scan_logs_result_enum.php   # ditambahkan Fase 8
+    ..._add_verified_via_to_registrations_table.php  # turnstile / captcha, perbaikan pra-pembukaan
   seeders/
     EventSeeder.php
     RegencySeeder.php
@@ -256,6 +275,9 @@ database/
     DatabaseSeeder.php
 
 resources/
+  fonts/
+    DejaVuSans-Bold.ttf                 # font captcha (FreeType)
+    DejaVu-LICENSE.txt                  # lisensi Bitstream Vera / DejaVu
   views/
     layouts/
       public.blade.php                  # font Plus Jakarta Sans + Caveat
@@ -296,6 +318,7 @@ public/
   js/
     stepper.js
     email-domain.js
+    verification.js                     # tombol Daftar menunggu Turnstile + panel captcha cadangan
     scanner.js                          # inti halaman scanner (Fase 7)
     scanner-hardware.js
     scanner-camera.js
@@ -322,6 +345,8 @@ tests/
     RegistrationTest.php                # kuota, duplikat email_canonical, HP tidak unik, format
     NotificationJobTest.php
     MailTicketNotifierTest.php          # email asli + sanitasi last_error — ditambahkan Fase 10
+    CaptchaTest.php                     # captcha gambar + throttle — perbaikan pra-pembukaan
+    NotificationChannelTextTest.php     # teks "email" vs "email dan WhatsApp" — perbaikan pra-pembukaan
     TicketPageTest.php
     ScanTest.php
     Admin/

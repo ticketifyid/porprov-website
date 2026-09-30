@@ -29,6 +29,11 @@ class LogTicketNotifier implements TicketNotifier
         return $this->write('whatsapp', $registration, ContactMasker::phone($registration->phone));
     }
 
+    public function deliversWhatsApp(): bool
+    {
+        return false;
+    }
+
     private function write(string $channel, Registration $registration, string $maskedDestination): string
     {
         $messageId = 'log-'.Str::uuid();

@@ -18,7 +18,7 @@
 
                 <div class="find-card__intro">
                     <h1 class="h1-page">Cari tiket saya</h1>
-                    <p class="find-card__lead">Masukkan nomor WhatsApp atau email yang dipakai saat mendaftar. Link e-ticket akan dikirim ulang ke kontak tersebut.</p>
+                    <p class="find-card__lead">Masukkan nomor WhatsApp atau email yang dipakai saat mendaftar. Link e-ticket akan dikirim ulang ke {{ $whatsappActive ? 'kontak tersebut' : 'email yang terdaftar' }}.</p>
                 </div>
 
                 <x-field
@@ -34,7 +34,7 @@
                 <x-button-primary type="submit">Kirim ulang link tiket</x-button-primary>
 
                 @if ($sent)
-                    <x-alert variant="info">Jika data terdaftar, link e-ticket sudah dikirim ulang ke email dan WhatsApp Anda. Cek juga folder spam.</x-alert>
+                    <x-alert variant="info">Jika data terdaftar, link e-ticket sudah dikirim ulang ke {{ $ticketChannels }} Anda. Cek juga folder spam.</x-alert>
                 @endif
 
                 <div class="find-help u-desktop-only-block">{{ $help }}</div>

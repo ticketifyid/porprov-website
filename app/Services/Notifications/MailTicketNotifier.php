@@ -36,4 +36,12 @@ class MailTicketNotifier implements TicketNotifier
     {
         return $this->whatsapp->sendWhatsApp($registration);
     }
+
+    /**
+     * WhatsApp masih diteruskan ke LogTicketNotifier.
+     */
+    public function deliversWhatsApp(): bool
+    {
+        return false;
+    }
 }

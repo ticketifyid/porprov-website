@@ -22,7 +22,7 @@ class RegisterAttendee
     private const MAX_ATTEMPTS = 10;
 
     /**
-     * @param  array{name: string, regency_id: int, email: string, email_canonical: string, phone: string, ticket_qty: int}  $data
+     * @param  array{name: string, regency_id: int, email: string, email_canonical: string, phone: string, ticket_qty: int, verified_via?: string|null}  $data
      *
      * @throws QuotaException
      */
@@ -61,6 +61,7 @@ class RegisterAttendee
             $registration->forceFill([
                 'code' => $this->uniqueCode($locked->code_prefix),
                 'token' => $this->uniqueToken(),
+                'verified_via' => $data['verified_via'] ?? null,
             ])->save();
 
             return $registration;

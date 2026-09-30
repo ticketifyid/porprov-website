@@ -5,8 +5,12 @@ namespace App\Providers;
 use App\Contracts\TicketNotifier;
 use App\Services\Notifications\LogTicketNotifier;
 use App\Services\Notifications\MailTicketNotifier;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 use RuntimeException;
@@ -55,6 +59,24 @@ class AppServiceProvider extends ServiceProvider
         // yang salah sasaran terhadap DB lokal). Command-command itu akan
         // menolak jalan dan melempar exception kecuali dipaksa dengan --force.
         DB::prohibitDestructiveCommands($this->app->isProduction());
+
+        // Gambar captcha: per sesi ketat, per IP longgar karena banyak
+        // pengguna seluler berbagi IP (CGNAT).
+        RateLimiter::for('daftar-captcha-image', fn (Request $request): array => [
+            Limit::perMinute(20)->by('sesi:'.$request->session()->getId()),
+            Limit::perMinute(120)->by('ip:'.$request->ip()),
+        ]);
+
+        // Kanal e-ticket yang benar-benar aktif, untuk teks halaman peserta.
+        // Selama WhatsApp masih diteruskan ke LogTicketNotifier, cukup "email".
+        View::composer('public.*', function ($view): void {
+            $whatsapp = $this->app->make(TicketNotifier::class)->deliversWhatsApp();
+
+            $view->with([
+                'whatsappActive' => $whatsapp,
+                'ticketChannels' => $whatsapp ? 'email dan WhatsApp' : 'email',
+            ]);
+        });
     }
 
     /**

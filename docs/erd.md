@@ -61,6 +61,7 @@ Seeder: 35 kabupaten/kota Jawa Tengah + "Luar Jawa Tengah" (sort_order terbesar)
 | cancelled_at | `dateTime('cancelled_at')->nullable()->index()` | Ditambahkan Fase 8 (`App\Actions\CancelRegistration`); registrasi yang sudah `redeemed_at` tidak boleh dibatalkan |
 | cancelled_by | `foreignId('cancelled_by')->nullable()->constrained('users')->nullOnDelete()` | Ditambahkan Fase 8; admin yang membatalkan |
 | ip_address | `string('ip_address', 45)->nullable()` | |
+| verified_via | `enum('verified_via', ['turnstile','captcha'])->nullable()->index()` | Ditambahkan perbaikan form pra-pembukaan (migration `2024_01_01_000008_add_verified_via_to_registrations_table.php`). Jalur anti-bot yang lolos: token Turnstile, atau captcha gambar cadangan. `NULL` untuk data lama dan saat `TURNSTILE_ENABLED=false`. Tidak fillable; diisi `RegisterAttendee` lewat `forceFill`. Tampil dan bisa difilter di daftar peserta admin |
 | timestamps | `timestamps()` | |
 
 Index: `unique(['event_id','email_canonical'])` (mengizinkan banyak `NULL`), index biasa `phone` (bukan unique — 1 nomor HP boleh dipakai lebih dari satu pendaftaran), index `name` untuk pencarian manual.

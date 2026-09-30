@@ -19,6 +19,13 @@
     }
 
     $quotaTail = trim($quotaTail.' Data lain tidak perlu diisi ulang.');
+
+    // Widget Turnstile hanya dirender jika aktif dan site key ada; selama itu
+    // tombol Daftar menunggu token (atau captcha cadangan) dari verification.js.
+    $turnstileActive = config('services.turnstile.enabled') && filled(config('services.turnstile.site_key'));
+
+    // Panel captcha langsung dibuka jika submit sebelumnya memakai captcha.
+    $captchaOpen = $errors->has('captcha') || filled(old('captcha'));
 @endphp
 
 @section('content')
@@ -65,7 +72,7 @@
 
                         <div class="form-panel__step">
                             <x-step-number :number="1" variant="inverse" />
-                            <div>E-ticket berisi QR dikirim ke email dan WhatsApp Anda.</div>
+                            <div>E-ticket berisi QR dikirim ke {{ $ticketChannels }} Anda.</div>
                         </div>
                         <div class="form-panel__step">
                             <x-step-number :number="2" variant="inverse" />
@@ -80,12 +87,18 @@
                     <x-strip-porprov class="strip-porprov--absolute strip-porprov--panel" />
                 </aside>
 
-                <form method="POST" action="{{ route('daftar.store') }}" class="form-card" novalidate>
+                <form method="POST" action="{{ route('daftar.store') }}" class="form-card" novalidate data-verify-form>
                     @csrf
+
+                    {{-- Honeypot: tidak terlihat dan tidak bisa difokus manusia. --}}
+                    <div class="hp-field" aria-hidden="true">
+                        <label for="website">Situs web</label>
+                        <input type="text" id="website" name="website" value="" tabindex="-1" autocomplete="off">
+                    </div>
 
                     <div class="form-card__heading u-desktop-only">
                         <h1 class="h1-page">Form pendaftaran</h1>
-                        <div class="form-subtitle">Isi data dengan benar. E-ticket dikirim ke email dan WhatsApp di bawah.</div>
+                        <div class="form-subtitle">Isi data dengan benar. E-ticket dikirim ke {{ $ticketChannels }} di bawah.</div>
                     </div>
 
                     @error('form')
@@ -114,7 +127,7 @@
                         <x-field label="Nomor WhatsApp" name="phone" type="tel" inputmode="numeric"
                                  placeholder="08xxxxxxxxxx" autocomplete="tel" maxlength="20"
                                  value="{{ old('phone') }}"
-                                 helper="Boleh diawali 08 atau 62. E-ticket dikirim ke nomor ini." />
+                                 :helper="'Boleh diawali 08 atau 62.'.($whatsappActive ? ' E-ticket dikirim ke nomor ini.' : '')" />
 
                         <div>
                             <x-stepper name="ticket_qty" :max="$maxQty" :value="(int) old('ticket_qty', 1)"
@@ -127,18 +140,51 @@
                     </div>
 
                     <div class="form-submit-row">
-                        @if (config('services.turnstile.enabled') && config('services.turnstile.site_key'))
+                        @if ($turnstileActive)
                             <div class="turnstile-box">
-                                <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}"></div>
+                                <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}"
+                                     data-callback="porprovTurnstileOk"
+                                     data-expired-callback="porprovTurnstileExpired"
+                                     data-error-callback="porprovTurnstileError"></div>
                             </div>
                         @endif
 
-                        <x-button-primary type="submit">Daftar</x-button-primary>
+                        <div class="submit-stack">
+                            <x-button-primary type="submit" :disabled="$turnstileActive">Daftar</x-button-primary>
+
+                            @if ($turnstileActive)
+                                <div class="verify-wait" data-verify-wait>Menunggu verifikasi keamanan…</div>
+                            @endif
+                        </div>
                     </div>
 
                     @error('cf-turnstile-response')
                         <div class="field__error">{{ $message }}</div>
                     @enderror
+
+                    @if ($turnstileActive)
+                        <div class="captcha-panel" data-captcha-panel{{ $captchaOpen ? '' : ' hidden' }}>
+                            <p class="captcha-panel__hint">Verifikasi keamanan gagal di perangkat ini. Coba aktifkan tanggal dan jam otomatis di HP, atau buka link ini di Chrome/Safari (bukan dari dalam WhatsApp/Instagram). Atau isi kode di bawah ini.</p>
+
+                            <div class="captcha-panel__row">
+                                <img class="captcha-panel__image" data-captcha-image data-src="{{ route('daftar.captcha') }}"
+                                     alt="Kode verifikasi" width="220" height="70">
+                                <button type="button" class="btn-text captcha-panel__refresh" data-captcha-refresh>Ganti gambar</button>
+                            </div>
+
+                            <div class="field">
+                                <label for="captcha">Kode pada gambar</label>
+                                <input type="text" id="captcha" name="captcha" value="" maxlength="5" inputmode="text"
+                                       autocomplete="off" autocapitalize="characters" spellcheck="false"
+                                       @error('captcha') aria-invalid="true" @enderror>
+                                @error('captcha')
+                                    <div class="field__error">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <button type="button" class="btn-secondary captcha-panel__retry" data-captcha-retry>Ulangi verifikasi</button>
+                        </div>
+                    @endif
 
                     <div class="form-consent u-desktop-only-block">Dengan mendaftar, Anda setuju data digunakan untuk keperluan registrasi acara ini.</div>
                 </form>
@@ -150,8 +196,11 @@
 @endsection
 
 @push('scripts')
-    @if (config('services.turnstile.enabled') && config('services.turnstile.site_key'))
-        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    @if ($turnstileActive)
+        {{-- verification.js HARUS sebelum api.js: callback Turnstile dan
+             onerror di bawah memanggil fungsi global dari file ini. --}}
+        <script src="@versionedAsset('js/verification.js')"></script>
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer onerror="porprovTurnstileLoadFailed()"></script>
     @endif
     <script src="@versionedAsset('js/email-domain.js')"></script>
     <script src="@versionedAsset('js/stepper.js')"></script>

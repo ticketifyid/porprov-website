@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Public\StoreRegistrationRequest;
 use App\Models\Event;
 use App\Models\Regency;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class HomeController extends Controller
 {
@@ -35,12 +39,23 @@ class HomeController extends Controller
      * GET /daftar — form pendaftaran (artboard Form / DesktopForm).
      * Frontend hanya menerima maxQty, tidak pernah angka sisa kuota (aturan 2).
      */
-    public function form(): View
+    public function form(): View|Response
     {
         $event = $this->event();
 
         if ($condition = $this->statusCondition($event)) {
             return $this->statusView($event, $condition);
+        }
+
+        if ($this->turnstileMisconfigured()) {
+            return response($this->statusView($event, 'perbaikan'), 503);
+        }
+
+        // Waktu form pertama kali dirender, untuk waktu isi minimum di
+        // StoreRegistrationRequest. Tidak diperbarui saat form dibuka ulang
+        // (mis. kembali karena error), supaya peserta tidak harus menunggu lagi.
+        if (! session()->has(StoreRegistrationRequest::RENDERED_AT_KEY)) {
+            session()->put(StoreRegistrationRequest::RENDERED_AT_KEY, now()->getTimestamp());
         }
 
         $maxQty = max(0, min(4, $event->quota - $event->tickets_taken));
@@ -52,6 +67,29 @@ class HomeController extends Controller
             'maxQty' => $maxQty,
             'regencies' => Regency::query()->orderBy('sort_order')->get(),
         ]);
+    }
+
+    /**
+     * Di produksi, Turnstile aktif tanpa site key atau secret key membuat form
+     * tidak bisa dipakai (tombol Daftar tidak pernah aktif / token selalu
+     * ditolak). Tampilkan halaman perbaikan dan catat error, maksimal sekali
+     * per 10 menit supaya log tidak banjir.
+     */
+    private function turnstileMisconfigured(): bool
+    {
+        if (! app()->isProduction() || ! config('services.turnstile.enabled')) {
+            return false;
+        }
+
+        if (filled(config('services.turnstile.site_key')) && filled(config('services.turnstile.secret_key'))) {
+            return false;
+        }
+
+        if (Cache::add('turnstile-misconfigured-logged', true, 600)) {
+            Log::error('Pendaftaran ditutup sementara: TURNSTILE_ENABLED=true tetapi TURNSTILE_SITE_KEY atau TURNSTILE_SECRET_KEY kosong. Isi kedua kunci di .env lalu jalankan `php artisan config:clear` (lihat docs/deploy.md).');
+        }
+
+        return true;
     }
 
     /**
@@ -104,6 +142,11 @@ class HomeController extends Controller
                 'title' => 'Kuota pendaftaran sudah penuh',
                 'body' => 'Seluruh tiket Opening Ceremony sudah terdaftar. Jika sudah mendaftar, e-ticket Anda tetap berlaku untuk registrasi ulang.',
                 'icon' => 'crowd',
+            ],
+            'perbaikan' => [
+                'title' => 'Pendaftaran sedang dalam perbaikan',
+                'body' => 'Mohon maaf, form pendaftaran sedang kami perbaiki. Silakan coba lagi beberapa saat lagi. Jika sudah mendaftar, e-ticket Anda tetap berlaku.',
+                'icon' => 'warning',
             ],
         ][$condition];
 

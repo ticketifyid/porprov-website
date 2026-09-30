@@ -40,6 +40,11 @@ class FakeTicketNotifier implements TicketNotifier
         return $this->record('whatsapp');
     }
 
+    public function deliversWhatsApp(): bool
+    {
+        return true;
+    }
+
     private function record(string $channel): ?string
     {
         $this->calls[] = $channel;

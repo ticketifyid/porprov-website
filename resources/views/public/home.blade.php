@@ -68,7 +68,7 @@
                     <x-step-number :number="2" />
                     <div class="step-item__body">
                         <div class="step-item__title">Terima e-ticket</div>
-                        <div class="step-item__desc">Link e-ticket berisi QR dikirim ke email dan WhatsApp Anda.</div>
+                        <div class="step-item__desc">Link e-ticket berisi QR dikirim ke {{ $ticketChannels }} Anda.</div>
                     </div>
                 </div>
                 <div class="step-item">

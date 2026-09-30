@@ -17,7 +17,12 @@ Route::get('/daftar', [HomeController::class, 'form'])->name('daftar');
 Route::post('/daftar', [RegistrationController::class, 'store'])
     ->middleware('throttle:20,1')
     ->name('daftar.store');
-Route::get('/daftar/sukses/{token}', [RegistrationController::class, 'success'])->name('daftar.sukses');
+// Captcha cadangan saat Turnstile gagal. Limiter 'daftar-captcha-image':
+// 20/menit per sesi, 120/menit per IP (CGNAT), lihat AppServiceProvider.
+Route::get('/daftar/captcha', [RegistrationController::class, 'captcha'])
+    ->middleware('throttle:daftar-captcha-image')
+    ->name('daftar.captcha');
+Route::get('/daftar/sukses/{token}',[RegistrationController::class, 'success'])->name('daftar.sukses');
 
 Route::get('/tiket/{registration:token}', [TicketController::class, 'show'])->name('tiket.show');
 Route::get('/cari-tiket', [TicketController::class, 'searchForm'])->name('cari-tiket');

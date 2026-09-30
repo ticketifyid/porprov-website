@@ -51,6 +51,8 @@
 >     /** @return string|null provider message id; lempar exception jika gagal */
 >     public function sendEmail(Registration $registration): ?string;
 >     public function sendWhatsApp(Registration $registration): ?string;
+>     /** true hanya jika sendWhatsApp() benar-benar mengirim WA; menentukan teks kanal di halaman peserta */
+>     public function deliversWhatsApp(): bool;
 > }
 > ```
 >

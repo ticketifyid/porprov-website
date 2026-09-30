@@ -31,8 +31,13 @@ interface TicketNotifier
 
     /** @return string|null provider message id; lempar exception jika gagal */
     public function sendWhatsApp(Registration $registration): ?string;
+
+    /** true hanya jika sendWhatsApp() benar-benar mengirim pesan WhatsApp */
+    public function deliversWhatsApp(): bool;
 }
 ```
+
+`deliversWhatsApp()` menentukan teks kanal di halaman peserta (beranda, form, halaman sukses, cari tiket) lewat view composer di `AppServiceProvider::boot()`: `false` → "email" saja, `true` → "email dan WhatsApp". `LogTicketNotifier` dan `MailTicketNotifier` sekarang mengembalikan `false`. **Begitu WhatsApp asli dipasang, implementasinya wajib mengembalikan `true`** — tanpa itu peserta tidak diberi tahu bahwa e-ticket juga dikirim lewat WhatsApp. Template email tidak menyebut WhatsApp sama sekali, jadi tidak ikut berubah.
 
 Dua aturan yang tidak boleh dilanggar implementasi apa pun:
 
@@ -72,7 +77,7 @@ Nilai lain sengaja **melempar `InvalidArgumentException`** saat resolve, bukan d
 
 ## Menambah implementasi baru
 
-Untuk WhatsApp: cukup ganti delegasi `sendWhatsApp()` di `MailTicketNotifier` (atau buat kelas gabungan seperti di bawah); binding `mail` tidak perlu diubah namanya kalau Anda tidak mau.
+Untuk WhatsApp: cukup ganti delegasi `sendWhatsApp()` di `MailTicketNotifier` (atau buat kelas gabungan seperti di bawah) dan ubah `deliversWhatsApp()` menjadi `true`; binding `mail` tidak perlu diubah namanya kalau Anda tidak mau.
 
 1. Buat kelas di `app/Services/Notifications/`, mis. `SmtpTicketNotifier.php`, `implements App\Contracts\TicketNotifier`. Implementasi asli Fase 10 (SMTP maupun WhatsApp) ditaruh di folder yang sama, **bukan** di `app/Notifications/` — folder itu tidak dipakai proyek ini supaya tidak tertukar dengan Notification bawaan Laravel.
 2. Tambah satu arm di `match` pada `AppServiceProvider::register()`:

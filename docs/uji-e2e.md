@@ -100,8 +100,10 @@ Dijalankan dari HP, memakai koneksi seluler (bukan Wi-Fi kantor), lewat domain p
 | 8 | Isi nomor HP `12345` | Ditolak: "Nomor WhatsApp tidak valid. Contoh: 081234567890." | [MANUAL] belum ada tesnya |
 | 9 | Tekan tombol `−` saat jumlah tiket = 1 | Tombol `−` nonaktif, angka tetap 1 | [MANUAL] logika: `RegistrationTest.php` |
 | 10 | Tekan `+` sampai mentok | Berhenti di 4. Tombol `+` nonaktif. Teks bantuan "Maks. 4 tiket." tetap tampil | [MANUAL] logika: `RegistrationTest.php` |
-| 11 | Selesaikan Turnstile | Centang/verifikasi muncul dan selesai sendiri | [MANUAL] |
-| 12 | Tekan Daftar tanpa menyelesaikan Turnstile (matikan dulu, atau submit cepat) | Ditolak: "Verifikasi keamanan belum selesai. Coba lagi." | [MANUAL] belum ada tesnya |
+| 11 | Selesaikan Turnstile | Sebelum selesai: tombol Daftar abu-abu + "Menunggu verifikasi keamanan…". Setelah centang selesai: tombol aktif | [MANUAL] markup: `RegistrationTest.php` |
+| 12 | Tekan Daftar tanpa menyelesaikan Turnstile (kirim POST tanpa token) | Ditolak: "Verifikasi keamanan belum selesai. Coba lagi." | [OTOMATIS] `RegistrationTest.php` |
+| 12a | Buka `/daftar` dari browser di dalam WhatsApp/Instagram, atau HP dengan jam salah (atau pakai site key uji Cloudflare `2x00000000000000000000AB` yang selalu gagal) | Panel "Verifikasi keamanan gagal di perangkat ini…" muncul dengan captcha gambar. Isi 5 karakter → tombol Daftar aktif → pendaftaran berhasil, di admin kolom Verifikasi = "Captcha gambar" | [MANUAL] server: `CaptchaTest.php` |
+| 12b | Kode captcha salah | Kembali ke form, isian tetap, gambar baru tampil, pesan "Kode tidak sesuai…" | [OTOMATIS] `CaptchaTest.php` |
 | 13 | Isi lengkap dan tekan Daftar | Halaman Sukses muncul | [OTOMATIS] `RegistrationTest.php` |
 
 ### A3. Halaman sukses & e-ticket

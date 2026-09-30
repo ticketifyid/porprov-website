@@ -7,11 +7,21 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-// code, token, redeemed_*, dan cancelled_* sengaja tidak fillable: hanya Action
-// yang boleh mengisinya (lewat forceFill / update bersyarat).
+// code, token, verified_via, redeemed_*, dan cancelled_* sengaja tidak fillable:
+// hanya Action yang boleh mengisinya (lewat forceFill / update bersyarat).
 #[Fillable(['event_id', 'name', 'regency_id', 'email', 'email_canonical', 'phone', 'ticket_qty', 'ip_address'])]
 class Registration extends Model
 {
+    /**
+     * Nilai kolom verified_via beserta labelnya di halaman admin.
+     *
+     * @var array<string, string>
+     */
+    public const VERIFIED_VIA = [
+        'turnstile' => 'Turnstile',
+        'captcha' => 'Captcha gambar',
+    ];
+
     /**
      * Get the attributes that should be cast.
      *

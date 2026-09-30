@@ -16,7 +16,7 @@ class TicketPageTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const NEUTRAL = 'Jika data terdaftar, link e-ticket sudah dikirim ulang ke email dan WhatsApp Anda.';
+    private const NEUTRAL = 'Jika data terdaftar, link e-ticket sudah dikirim ulang ke email Anda.';
 
     private Event $event;
 

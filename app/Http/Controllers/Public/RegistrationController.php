@@ -10,6 +10,7 @@ use App\Jobs\SendTicketNotification;
 use App\Models\Event;
 use App\Models\NotificationLog;
 use App\Models\Registration;
+use App\Services\ImageCaptcha;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
@@ -48,6 +49,7 @@ class RegistrationController extends Controller
                 'email_canonical' => $data['email_canonical'],
                 'phone' => $request->normalizedPhone(),
                 'ticket_qty' => (int) $data['ticket_qty'],
+                'verified_via' => $request->verifiedVia(),
             ], $request->ip());
         } catch (QuotaException $e) {
             return back(fallback: route('daftar'))
@@ -93,6 +95,20 @@ class RegistrationController extends Controller
         return response()->view('public.sukses', ['registration' => $registration], 200, [
             'X-Robots-Tag' => 'noindex',
             'Referrer-Policy' => 'no-referrer',
+        ]);
+    }
+
+    /**
+     * GET /daftar/captcha — gambar captcha cadangan. Setiap permintaan membuat
+     * kode baru (tombol "Ganti gambar") dan menggantikan kode lama di session.
+     */
+    public function captcha(ImageCaptcha $captcha): Response
+    {
+        return response($captcha->renderPng($captcha->issue()), 200, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+            'X-Robots-Tag' => 'noindex',
         ]);
     }
 

@@ -7,6 +7,7 @@ use App\Jobs\SendTicketNotification;
 use App\Models\Event;
 use App\Models\Regency;
 use App\Models\Registration;
+use App\Services\ImageCaptcha;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
@@ -45,6 +46,10 @@ class RegistrationTest extends TestCase
         Log::listen(function ($event): void {
             $this->turnstileLogs[] = ['level' => $event->level, 'message' => $event->message, 'context' => $event->context];
         });
+
+        // Form dianggap sudah dirender semenit lalu, supaya pengecekan waktu
+        // isi minimum (3 detik) tidak menolak POST langsung di tes.
+        $this->withSession(['daftar_form_rendered_at' => now()->subMinute()->getTimestamp()]);
     }
 
     /**
@@ -241,6 +246,7 @@ class RegistrationTest extends TestCase
             'redeemed_by' => 1,
             'cancelled_at' => now(),
             'cancelled_by' => 1,
+            'verified_via' => 'captcha',
             'name' => 'Budi',
         ]);
 
@@ -361,6 +367,185 @@ class RegistrationTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->assertSame(1, Registration::count());
+        $this->assertSame('turnstile', Registration::firstOrFail()->verified_via);
+    }
+
+    public function test_token_dan_captcha_kosong_ditolak_dengan_pesan_belum_selesai(): void
+    {
+        config(['services.turnstile.enabled' => true, 'services.turnstile.secret_key' => 'rahasia']);
+        Http::fake();
+
+        $this->post('/daftar', $this->payload())
+            ->assertRedirect('/daftar')
+            ->assertSessionHasErrors(['cf-turnstile-response' => 'Verifikasi keamanan belum selesai. Coba lagi.'])
+            ->assertSessionHasInput('name', 'Budi Santoso');
+
+        Http::assertNothingSent();
+        $this->assertSame(0, Registration::count());
+    }
+
+    public function test_turnstile_dimatikan_verified_via_kosong(): void
+    {
+        Queue::fake();
+
+        $this->post('/daftar', $this->payload())->assertSessionHasNoErrors();
+
+        $this->assertNull(Registration::firstOrFail()->verified_via);
+    }
+
+    public function test_verified_via_tidak_bisa_diisi_dari_request(): void
+    {
+        Queue::fake();
+
+        $this->post('/daftar', $this->payload(['verified_via' => 'captcha']))->assertSessionHasNoErrors();
+
+        $this->assertNull(Registration::firstOrFail()->verified_via);
+    }
+
+    public function test_tombol_daftar_nonaktif_sampai_ada_token_saat_turnstile_aktif(): void
+    {
+        config(['services.turnstile.enabled' => true, 'services.turnstile.site_key' => 'site-key-uji', 'services.turnstile.secret_key' => 'rahasia']);
+
+        $response = $this->get('/daftar')->assertOk();
+
+        $response->assertSee('data-callback="porprovTurnstileOk"', false);
+        $response->assertSee('data-expired-callback="porprovTurnstileExpired"', false);
+        $response->assertSee('data-error-callback="porprovTurnstileError"', false);
+        $response->assertSee('<button type="submit" disabled', false);
+        $response->assertSeeText('Menunggu verifikasi keamanan…');
+        // Panel captcha cadangan ada, tersembunyi sampai Turnstile gagal.
+        $response->assertSee('data-captcha-panel hidden', false);
+        $response->assertSeeText('Verifikasi keamanan gagal di perangkat ini.');
+        $response->assertSee('js/verification.js?v=', false);
+    }
+
+    public function test_tombol_daftar_langsung_aktif_saat_turnstile_dimatikan(): void
+    {
+        $response = $this->get('/daftar')->assertOk();
+
+        $response->assertDontSee('<button type="submit" disabled', false);
+        $response->assertDontSeeText('Menunggu verifikasi keamanan…');
+        $response->assertDontSee('cf-turnstile', false);
+        $response->assertDontSee('data-captcha-panel', false);
+    }
+
+    public function test_panel_captcha_langsung_tampil_setelah_captcha_salah(): void
+    {
+        config(['services.turnstile.enabled' => true, 'services.turnstile.site_key' => 'site-key-uji', 'services.turnstile.secret_key' => 'rahasia']);
+
+        $code = app(ImageCaptcha::class)->issue();
+        $wrong = $code === 'AAAAA' ? 'BBBBB' : 'AAAAA';
+
+        $response = $this->followingRedirects()->post('/daftar', $this->payload(['captcha' => $wrong]));
+
+        $response->assertOk();
+        $response->assertSee('data-captcha-panel>', false);
+        $response->assertSeeText('Kode tidak sesuai. Ketik ulang kode pada gambar baru.');
+        // Isian tetap ada.
+        $response->assertSee('value="Budi Santoso"', false);
+    }
+
+    // -------------------------------------------- pengaman produksi turnstile
+
+    public function test_produksi_tanpa_kunci_turnstile_menampilkan_halaman_perbaikan(): void
+    {
+        $this->app->detectEnvironment(fn () => 'production');
+
+        foreach ([['', 'rahasia'], ['site-key', ''], [null, null]] as [$site, $secret]) {
+            config(['services.turnstile.enabled' => true, 'services.turnstile.site_key' => $site, 'services.turnstile.secret_key' => $secret]);
+
+            $response = $this->get('/daftar');
+
+            $response->assertStatus(503);
+            $response->assertSeeText('Pendaftaran sedang dalam perbaikan');
+            $response->assertDontSee('name="email_local"', false);
+        }
+
+        $errors = collect($this->turnstileLogs)->where('level', 'error');
+        $this->assertCount(1, $errors, 'Log error dibatasi sekali per 10 menit.');
+        $this->assertStringContainsString('TURNSTILE_SITE_KEY', $errors->first()['message']);
+    }
+
+    public function test_produksi_dengan_kunci_lengkap_menampilkan_form(): void
+    {
+        $this->app->detectEnvironment(fn () => 'production');
+        config(['services.turnstile.enabled' => true, 'services.turnstile.site_key' => 'site-key', 'services.turnstile.secret_key' => 'rahasia']);
+
+        $this->get('/daftar')->assertOk()->assertSee('name="email_local"', false);
+    }
+
+    public function test_produksi_dengan_turnstile_dimatikan_menampilkan_form(): void
+    {
+        $this->app->detectEnvironment(fn () => 'production');
+        config(['services.turnstile.enabled' => false, 'services.turnstile.site_key' => '', 'services.turnstile.secret_key' => '']);
+
+        $this->get('/daftar')->assertOk()->assertSee('name="email_local"', false);
+    }
+
+    // ------------------------------------------- honeypot & waktu isi minimum
+
+    public function test_honeypot_terisi_ditolak_dan_isian_tetap_ada(): void
+    {
+        $response = $this->post('/daftar', $this->payload(['website' => 'http://spam.example']));
+
+        $response->assertRedirect('/daftar');
+        $response->assertSessionHasErrors(['form' => 'Pendaftaran tidak dapat diproses. Silakan coba lagi.']);
+        $response->assertSessionHasInput('name', 'Budi Santoso');
+        $this->assertSame(0, Registration::count());
+    }
+
+    public function test_honeypot_berlaku_juga_saat_turnstile_aktif_dan_token_tidak_diverifikasi(): void
+    {
+        config(['services.turnstile.enabled' => true, 'services.turnstile.secret_key' => 'rahasia']);
+        Http::fake(['challenges.cloudflare.com/*' => Http::response(['success' => true])]);
+
+        $this->post('/daftar', $this->payload(['website' => 'x', 'cf-turnstile-response' => 'token-widget']))
+            ->assertSessionHasErrors('form');
+
+        Http::assertNothingSent();
+        $this->assertSame(0, Registration::count());
+    }
+
+    public function test_submit_kurang_dari_tiga_detik_setelah_form_dirender_ditolak(): void
+    {
+        Queue::fake();
+        $this->withSession(['daftar_form_rendered_at' => now()->getTimestamp()]);
+
+        $this->travel(2)->seconds();
+
+        $this->post('/daftar', $this->payload())
+            ->assertRedirect('/daftar')
+            ->assertSessionHasErrors(['form' => 'Mohon tunggu sebentar, lalu tekan Daftar lagi.'])
+            ->assertSessionHasInput('email_local', 'budi');
+        $this->assertSame(0, Registration::count());
+
+        $this->travel(1)->seconds();
+
+        $this->post('/daftar', $this->payload())->assertSessionHasNoErrors();
+        $this->assertSame(1, Registration::count());
+    }
+
+    public function test_submit_tanpa_pernah_membuka_form_ditolak(): void
+    {
+        session()->forget('daftar_form_rendered_at');
+
+        $this->post('/daftar', $this->payload())
+            ->assertSessionHasErrors(['form' => 'Mohon tunggu sebentar, lalu tekan Daftar lagi.']);
+        $this->assertSame(0, Registration::count());
+    }
+
+    public function test_waktu_render_form_diukur_server_dan_tidak_direset_saat_dibuka_ulang(): void
+    {
+        session()->forget('daftar_form_rendered_at');
+
+        $this->get('/daftar')->assertOk();
+        $first = session('daftar_form_rendered_at');
+        $this->assertSame(now()->getTimestamp(), $first);
+
+        $this->travel(10)->seconds();
+        $this->get('/daftar')->assertOk();
+
+        $this->assertSame($first, session('daftar_form_rendered_at'));
     }
 
     // -------------------------------------------------------------- sukses
