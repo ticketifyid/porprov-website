@@ -67,7 +67,7 @@ class TicketController extends Controller
 
     /**
      * POST /cari-tiket — respons SELALU pesan netral yang sama, terdaftar
-     * atau tidak (docs/arsitektur.md Fase 3). Throttle IP (route, 20/menit)
+     * atau tidak (docs/arsitektur.md Fase 3). Throttle IP (route, 120/menit)
      * menjaga dari banjir permintaan; throttle per-kontak di bawah ini
      * mencegah spam resend ke satu peserta tanpa membocorkan lewat respons
      * yang berbeda kalau limitnya kena.

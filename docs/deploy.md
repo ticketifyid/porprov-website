@@ -319,7 +319,7 @@ berarti Laravel mempercayai `X-Forwarded-For` dari siapa pun yang bisa menjangka
 origin, sehingga:
 
 - throttle per IP (`POST /daftar` 300/menit lewat limiter `daftar-submit`, dan
-  `POST /cari-tiket` `throttle:20,1`) bisa ditembus hanya dengan mengganti-ganti header; dan
+  `POST /cari-tiket` `throttle:120,1`) bisa ditembus hanya dengan mengganti-ganti header; dan
 - `registrations.ip_address` serta `scan_logs.ip_address` jadi tidak bisa dipercaya saat
   menelusuri pendaftaran mencurigakan.
 

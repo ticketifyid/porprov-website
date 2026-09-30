@@ -242,14 +242,40 @@ class TicketPageTest extends TestCase
         Queue::assertNotPushed(SendTicketNotification::class);
     }
 
-    public function test_throttle_per_ip_20_per_menit_baru_menghasilkan_429(): void
+    public function test_throttle_per_ip_120_per_menit_baru_menghasilkan_429(): void
     {
         Queue::fake();
 
-        foreach (range(1, 20) as $i) {
-            $this->post('/cari-tiket', ['contact' => "0812000000{$i}"])->assertOk();
+        // Kontak berbeda-beda supaya batas per kontak (3/jam) tidak ikut kena.
+        foreach (range(1, 120) as $i) {
+            $this->post('/cari-tiket', ['contact' => sprintf('0812%08d', $i)])->assertOk()->assertSee(self::NEUTRAL);
         }
 
-        $this->post('/cari-tiket', ['contact' => '08120000099'])->assertStatus(429);
+        $this->post('/cari-tiket', ['contact' => '081299999999'])->assertStatus(429);
+
+        // IP lain tidak ikut terblokir.
+        $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.2'])
+            ->post('/cari-tiket', ['contact' => '081299999999'])
+            ->assertOk();
+
+        // Setelah semenit, IP pertama bebas lagi.
+        $this->travel(61)->seconds();
+        $this->post('/cari-tiket', ['contact' => '081288888888'])->assertOk();
+    }
+
+    public function test_batas_per_kontak_tetap_tiga_per_jam_setelah_throttle_ip_dilonggarkan(): void
+    {
+        Queue::fake();
+        $this->makeRegistration();
+
+        foreach (range(1, 10) as $i) {
+            $this->post('/cari-tiket', ['contact' => 'budisantoso@gmail.com'])->assertOk()->assertSee(self::NEUTRAL);
+        }
+
+        Queue::assertPushed(SendTicketNotification::class, 6); // tetap 3 permintaan x 2 kanal
+
+        $this->travel(61)->minutes();
+        $this->post('/cari-tiket', ['contact' => 'budisantoso@gmail.com'])->assertOk();
+        Queue::assertPushed(SendTicketNotification::class, 8);
     }
 }

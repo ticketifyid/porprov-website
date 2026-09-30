@@ -24,14 +24,14 @@ Route::post('/daftar', [RegistrationController::class, 'store'])
 Route::get('/daftar/captcha', [RegistrationController::class, 'captcha'])
     ->middleware('throttle:daftar-captcha-image')
     ->name('daftar.captcha');
-Route::get('/daftar/sukses/{token}',[RegistrationController::class, 'success'])->name('daftar.sukses');
+Route::get('/daftar/sukses/{token}', [RegistrationController::class, 'success'])->name('daftar.sukses');
 
 Route::get('/tiket/{registration:token}', [TicketController::class, 'show'])->name('tiket.show');
 Route::get('/cari-tiket', [TicketController::class, 'searchForm'])->name('cari-tiket');
 // Throttle per-IP longgar (banyak pengguna seluler berbagi IP lewat CGNAT);
 // batas ketat per-kontak (3/jam) ada di TicketController@search dan tidak 429.
 Route::post('/cari-tiket', [TicketController::class, 'search'])
-    ->middleware('throttle:20,1')
+    ->middleware('throttle:120,1')
     ->name('cari-tiket.submit');
 
 if (app()->environment('local')) {
