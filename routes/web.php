@@ -14,8 +14,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/daftar', [HomeController::class, 'form'])->name('daftar');
+// Limiter 'daftar-submit': 10/menit per sesi, 300/menit per IP (CGNAT); saat
+// terlampaui kembali ke form dengan isian tetap, lihat AppServiceProvider.
 Route::post('/daftar', [RegistrationController::class, 'store'])
-    ->middleware('throttle:20,1')
+    ->middleware('throttle:daftar-submit')
     ->name('daftar.store');
 // Captcha cadangan saat Turnstile gagal. Limiter 'daftar-captcha-image':
 // 20/menit per sesi, 120/menit per IP (CGNAT), lihat AppServiceProvider.

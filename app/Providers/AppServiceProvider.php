@@ -6,6 +6,7 @@ use App\Contracts\TicketNotifier;
 use App\Services\Notifications\LogTicketNotifier;
 use App\Services\Notifications\MailTicketNotifier;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
@@ -59,6 +60,21 @@ class AppServiceProvider extends ServiceProvider
         // yang salah sasaran terhadap DB lokal). Command-command itu akan
         // menolak jalan dan melempar exception kecuali dipaksa dengan --force.
         DB::prohibitDestructiveCommands($this->app->isProduction());
+
+        // POST /daftar: per IP longgar (CGNAT: satu IP operator seluler
+        // dipakai banyak peserta), per sesi ketat. Saat batas terlampaui,
+        // kembali ke form dengan error dan isian tetap, bukan halaman 429.
+        RateLimiter::for('daftar-submit', function (Request $request): array {
+            $backToForm = fn (Request $request): RedirectResponse => redirect()
+                ->to(url()->previous(route('daftar')))
+                ->withInput($request->except(['_token', 'captcha', 'cf-turnstile-response']))
+                ->withErrors(['form' => 'Terlalu banyak percobaan pendaftaran dari perangkat atau jaringan Anda. Tunggu 1 menit, lalu tekan Daftar lagi.']);
+
+            return [
+                Limit::perMinute(10)->by('sesi:'.$request->session()->getId())->response($backToForm),
+                Limit::perMinute(300)->by('ip:'.$request->ip())->response($backToForm),
+            ];
+        });
 
         // Gambar captcha: per sesi ketat, per IP longgar karena banyak
         // pengguna seluler berbagi IP (CGNAT).

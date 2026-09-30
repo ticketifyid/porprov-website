@@ -365,9 +365,9 @@ function pendaftar(string $root, int $index, float $mulai): int
         'phone' => '08' . str_pad((string) (1200000000 + $index), 10, '0', STR_PAD_LEFT),
         'ticket_qty' => $qty,
     ], [], [], [
-        // IP berbeda per pendaftar: throttle:20,1 pada POST /daftar dihitung
-        // per IP, jadi 50 pendaftar dari satu IP akan tertolak 429 sebelum
-        // sempat menyentuh kuota.
+        // IP berbeda per pendaftar: limiter daftar-submit menghitung per IP
+        // (300/menit) dan per sesi (10/menit). Setiap proses sudah bersesi
+        // baru, IP dibedakan supaya uji tetap mencerminkan pendaftar berbeda.
         'REMOTE_ADDR' => '10.0.'.intdiv($index, 250).'.'.(($index % 250) + 1),
     ]);
 

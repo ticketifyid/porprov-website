@@ -246,7 +246,7 @@ class CaptchaTest extends TestCase
         $captcha = app(ImageCaptcha::class);
 
         // 6 sesi x 5 percobaan = 30 percobaan dari satu IP. Jeda 61 detik per
-        // sesi supaya throttle rute POST /daftar (20/menit/IP) tidak ikut kena.
+        // sesi: tetap di dalam jendela 10 menit throttle captcha.
         for ($s = 0; $s < 6; $s++) {
             $this->useSession(Str::random(40));
 

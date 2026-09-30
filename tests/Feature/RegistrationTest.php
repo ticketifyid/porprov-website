@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use PDOException;
 use Tests\TestCase;
 
@@ -532,6 +534,88 @@ class RegistrationTest extends TestCase
         $this->post('/daftar', $this->payload())
             ->assertSessionHasErrors(['form' => 'Mohon tunggu sebentar, lalu tekan Daftar lagi.']);
         $this->assertSame(0, Registration::count());
+    }
+
+    // ------------------------------------------------- throttle POST /daftar
+
+    private const THROTTLE_MESSAGE = 'Terlalu banyak percobaan pendaftaran dari perangkat atau jaringan Anda. Tunggu 1 menit, lalu tekan Daftar lagi.';
+
+    /**
+     * Pindah ke sesi lain (cookie sesi tetap supaya throttle per sesi bisa
+     * dihitung) dari IP yang sama.
+     */
+    private function useSession(): void
+    {
+        $this->app['session.store']->flush();
+        $this->withCookie(config('session.cookie'), Str::random(40));
+        $this->withSession(['daftar_form_rendered_at' => now()->subMinute()->getTimestamp()]);
+    }
+
+    private function assertThrottledBackToForm(TestResponse $response): void
+    {
+        $response->assertRedirect('/daftar');
+        $response->assertSessionHasErrors(['form' => self::THROTTLE_MESSAGE]);
+        $response->assertSessionHasInput('name', 'Budi Santoso');
+        $response->assertSessionHasInput('email_local', 'budi');
+        $response->assertSessionHasInput('phone', '081234567890');
+    }
+
+    public function test_post_daftar_dibatasi_sepuluh_per_menit_per_sesi_dengan_isian_tetap(): void
+    {
+        Queue::fake();
+        $this->useSession();
+
+        // Percobaan yang gagal validasi pun dihitung.
+        for ($i = 0; $i < 10; $i++) {
+            $this->post('/daftar', $this->payload(['ticket_qty' => 9]))->assertSessionHasErrors('ticket_qty');
+        }
+
+        $this->assertThrottledBackToForm($this->post('/daftar', $this->payload()));
+        $this->assertSame(0, Registration::count());
+
+        // Halaman form menampilkan pesannya dan isian tetap terisi (bukan 429).
+        $page = $this->followingRedirects()->post('/daftar', $this->payload());
+        $page->assertOk();
+        $page->assertSeeText(self::THROTTLE_MESSAGE);
+        $page->assertSee('value="Budi Santoso"', false);
+
+        // Sesi lain dari IP yang sama tidak ikut terblokir.
+        $this->useSession();
+        $this->post('/daftar', $this->payload())->assertSessionHasNoErrors();
+        $this->assertSame(1, Registration::count());
+
+        // Setelah semenit, sesi pertama pun bebas lagi.
+        $this->travel(61)->seconds();
+        $this->useSession();
+        $this->post('/daftar', $this->payload(['email_local' => 'budi2']))->assertSessionHasNoErrors();
+    }
+
+    public function test_post_daftar_dibatasi_tiga_ratus_per_menit_per_ip_dengan_isian_tetap(): void
+    {
+        Queue::fake();
+
+        // 30 sesi x 10 percobaan = 300 dari satu IP, tidak satu pun kena
+        // batas per sesi.
+        for ($s = 0; $s < 30; $s++) {
+            $this->useSession();
+
+            for ($i = 0; $i < 10; $i++) {
+                $this->post('/daftar', $this->payload(['ticket_qty' => 9]))
+                    ->assertSessionHasErrors('ticket_qty')
+                    ->assertSessionDoesntHaveErrors('form');
+            }
+        }
+
+        $this->useSession();
+        $this->assertThrottledBackToForm($this->post('/daftar', $this->payload()));
+        $this->assertSame(0, Registration::count());
+
+        // IP lain tidak terpengaruh.
+        $this->useSession();
+        $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.2'])
+            ->post('/daftar', $this->payload())
+            ->assertSessionHasNoErrors();
+        $this->assertSame(1, Registration::count());
     }
 
     public function test_waktu_render_form_diukur_server_dan_tidak_direset_saat_dibuka_ulang(): void
