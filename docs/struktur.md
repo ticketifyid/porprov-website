@@ -217,6 +217,14 @@ Perbaikan form `/daftar` sebelum pendaftaran resmi dibuka: Turnstile, captcha ga
 - **Tagline beranda** "Satu langkah menuju semangat Jawa Tengah!" → "Ngopeni Nglakoni Menuju Puncak Prestasi Jawa Tengah" (view beranda, `_styleguide`, `DESIGN.md`, artboard `Main`/`DesktopMain`, `RegistrationTest`). Gaya tetap (Caveat, `-2deg`, navy, 28px/38px); karena lebih panjang, `.tagline-caveat` diberi `text-wrap: balance` sehingga membungkus jadi dua baris seimbang di 390px dan 1280px tanpa menabrak judul di atas maupun kartu fakta di bawahnya.
 - **Tes**: `tests/Feature/LogoBarTest.php` (baru) — keempat logo dengan alt benar, sumber WebP + fallback PNG ber-`width`/`height` + versi `?v=` di beranda, form, sukses, tiket, cari tiket, dan status; bar tepat setelah strip dan sebelum isi halaman; tidak ada rujukan logo lama; beranda memuat tagline baru dan tidak lagi tagline lama (juga di seluruh `resources/views` dan `docs/design`). Tampilan diperiksa manual lewat Chrome headless di 320/390/500/1280px.
 
+### Penyimpangan disetujui: ketentuan penonton di beranda
+
+- **Penyimpangan desain** (permintaan pemilik proyek): bagian "Ketentuan penonton" tidak ada di artboard `Main` / `DesktopMain`. Letaknya di beranda saja, setelah "Cara mendaftar" dan sebelum footer (`resources/views/public/home.blade.php`, blok `.home-rules`). Dua kartu: "Lakukan" (aksen `--porprov-1` #179C52) dan "Jangan" (aksen `--porprov-3` #D93A2B). Mobile satu kolom; ≥ 992px dua kolom berdampingan. Hanya memakai token yang sudah ada (`--surface`, `--line`, `--navy`, `--ink`, token Porprov); kartu putih beraksen garis atas 4px, lencana bulat 36px (centang / silang), tiap butir berikon bulat 40px berborder 1.5px warna aksen. Ukuran, radius, dan jarak mengikuti pola kartu langkah dan fakta yang sudah ada, bukan angka dari artboard.
+- **Ikon**: sembilan `case` baru di `components/icon.blade.php` (`close`, `id-card`, `trash`, `camera`, `cigarette`, `pill`, `blade`, `paw`; `check`, `wristband`, `clock`, `location` memakai yang sudah ada). SVG garis stroke 2 inline, tanpa emoji dan tanpa gambar eksternal.
+- **Jam "Datang tepat waktu"**: `HomeController@index` menambah `eventStartsTime` (`event_starts_at->format('H.i')`, zona aplikasi) ke view. Butirnya "Datang tepat waktu (pukul 19.00)"; jika `event_starts_at` null, hanya "Datang tepat waktu" tanpa kurung/jam (tidak ada placeholder). Teks butir lain statis di view.
+- **Tautan poster**: "Lihat poster lengkap" membuka `public/img/poster-dodont.webp` di tab baru (`target="_blank" rel="noopener"`, URL lewat `@versionedAsset`). Fallback `.jpg` disimpan di `data-fallback`; skrip kecil inline di home (`@push('scripts')`) mengalihkan `href` ke JPG hanya bila browser tidak mendukung WebP (anchor biasa tidak punya mekanisme fallback sendiri).
+- **Tes**: `tests/Feature/HomeRulesTest.php` (baru) — judul, kedua kelompok, semua 10 butir, urutan setelah "Cara mendaftar" dan sebelum footer, jam mengikuti `event_starts_at` (dan hilang saat null), tautan poster, bagian tidak muncul di `/daftar` dan `/cari-tiket`, dan beranda tetap tanpa angka kuota. Tampilan diperiksa lewat Chrome headless di 500px dan 1280px.
+
 ```
 app/
   Actions/
@@ -374,6 +382,7 @@ tests/
     NotificationChannelTextTest.php     # teks "email" vs "email dan WhatsApp" — perbaikan pra-pembukaan
     RegencyComboboxTest.php             # select Domisili tetap lengkap + old() terpilih
     LogoBarTest.php                     # bar logo di semua halaman peserta + tagline baru
+    HomeRulesTest.php                   # ketentuan penonton (Lakukan/Jangan) di beranda
     TicketPageTest.php
     ScanTest.php
     Admin/

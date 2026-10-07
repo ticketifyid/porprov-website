@@ -69,5 +69,53 @@
             <rect x="3" y="9" width="18" height="6" rx="3"></rect>
             <path d="M8 9v6M16 9v6"></path>
             @break
+
+        @case('close')
+            <path d="M6 6l12 12M18 6L6 18"></path>
+            @break
+
+        @case('id-card')
+            <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+            <circle cx="9" cy="11" r="2"></circle>
+            <path d="M6.5 16a3 3 0 0 1 5 0"></path>
+            <path d="M14 10h4M14 14h4"></path>
+            @break
+
+        @case('trash')
+            <path d="M4 7h16"></path>
+            <path d="M9 7V4h6v3"></path>
+            <path d="M6 7l1 13h10l1-13"></path>
+            <path d="M10 11v6M14 11v6"></path>
+            @break
+
+        @case('camera')
+            <path d="M4 8h3l2-3h6l2 3h3v11H4z"></path>
+            <circle cx="12" cy="13" r="3.5"></circle>
+            @break
+
+        @case('cigarette')
+            <rect x="3" y="14" width="13" height="4" rx="1"></rect>
+            <path d="M16 14v4M20 14v4"></path>
+            <path d="M19 10c1-1 1-3 0-4"></path>
+            @break
+
+        @case('pill')
+            <path d="M10.5 20.5a4.95 4.95 0 0 1-7-7l10-10a4.95 4.95 0 0 1 7 7z"></path>
+            <path d="M8.5 8.5l7 7"></path>
+            @break
+
+        @case('blade')
+            <path d="M12 2l2.5 11h-5z"></path>
+            <path d="M8 13h8"></path>
+            <path d="M12 13v8"></path>
+            @break
+
+        @case('paw')
+            <circle cx="6" cy="11" r="1.8"></circle>
+            <circle cx="10" cy="6.5" r="1.8"></circle>
+            <circle cx="15" cy="6.5" r="1.8"></circle>
+            <circle cx="19" cy="11" r="1.8"></circle>
+            <path d="M7.5 17c0-3 2-5 4.5-5s4.5 2 4.5 5c0 2-2 2.5-4.5 2.5S7.5 19 7.5 17z"></path>
+            @break
     @endswitch
 </svg>

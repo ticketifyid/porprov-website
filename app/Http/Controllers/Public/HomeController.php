@@ -32,6 +32,8 @@ class HomeController extends Controller
             'eventName' => $event->name,
             'venue' => $event->venue,
             'eventStartsAt' => $this->formatDateTime($event->event_starts_at),
+            // Jam saja untuk butir "Datang tepat waktu"; null jika jadwal belum diisi.
+            'eventStartsTime' => $event->event_starts_at?->format('H.i'),
         ]);
     }
 

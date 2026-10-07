@@ -1488,6 +1488,124 @@ input, select, textarea {
   }
 }
 
+/* ---------- Ketentuan penonton (beranda) ---------- */
+
+.home-rules {
+  padding: 8px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.home-rules__title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--navy);
+}
+
+.rules-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.rules-card {
+  --accent: var(--porprov-1);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--accent);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.rules-card--dont {
+  --accent: var(--porprov-3);
+}
+
+.rules-card__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--navy);
+}
+
+.rules-card__badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.rules-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rules-list__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.rules-list__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.rules-poster-link {
+  align-self: center;
+}
+
+@media (min-width: 992px) {
+  .home-rules {
+    padding: 8px 80px 56px;
+    gap: 24px;
+  }
+
+  .home-rules__title {
+    font-size: 30px;
+  }
+
+  .rules-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+  }
+
+  .rules-card {
+    padding: 28px;
+  }
+
+  .rules-card__title {
+    font-size: 20px;
+  }
+
+  .rules-list__item {
+    font-size: 16px;
+  }
+}
+
 /* ---------- Footer ---------- */
 
 .site-footer {

@@ -86,9 +86,61 @@
             </div>
         </div>
 
+        <div class="home-rules" id="ketentuan">
+            <h2 class="home-rules__title">Ketentuan penonton</h2>
+
+            @php
+                $lakukan = [
+                    ['id-card', 'Membawa kartu identitas'],
+                    ['wristband', 'Mengenakan tiket gelang'],
+                    ['clock', 'Datang tepat waktu'.($eventStartsTime ? ' (pukul '.$eventStartsTime.')' : '')],
+                    ['location', 'Pastikan berada di tribun yang benar'],
+                    ['trash', 'Jaga kebersihan'],
+                ];
+                $jangan = [
+                    ['camera', 'Membawa kamera profesional dan tongsis'],
+                    ['cigarette', 'Merokok atau rokok elektrik'],
+                    ['pill', 'Membawa obat-obatan terlarang'],
+                    ['blade', 'Membawa senjata tajam'],
+                    ['paw', 'Membawa hewan peliharaan'],
+                ];
+            @endphp
+
+            <div class="rules-grid">
+                @foreach ([['do', 'check', 'Lakukan', $lakukan], ['dont', 'close', 'Jangan', $jangan]] as [$kind, $badge, $title, $items])
+                    <section class="rules-card rules-card--{{ $kind }}">
+                        <h3 class="rules-card__title"><span class="rules-card__badge"><x-icon :name="$badge" :size="20" :stroke="2.4" /></span>{{ $title }}</h3>
+                        <ul class="rules-list">
+                            @foreach ($items as [$icon, $text])
+                                <li class="rules-list__item">
+                                    <span class="rules-list__icon"><x-icon :name="$icon" :size="22" /></span>
+                                    <span>{{ $text }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </section>
+                @endforeach
+            </div>
+
+            <a href="@versionedAsset('img/poster-dodont.webp')" data-fallback="@versionedAsset('img/poster-dodont.jpg')"
+               target="_blank" rel="noopener" class="btn-text rules-poster-link" data-poster-link>Lihat poster lengkap</a>
+        </div>
+
         <div class="site-footer">
             <span>Didukung oleh <strong>Ticketify</strong></span>
             <a href="{{ url('/cari-tiket') }}">Bantuan tiket</a>
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        // Poster WebP; browser tanpa dukungan WebP dialihkan ke JPG.
+        (function () {
+            var link = document.querySelector('[data-poster-link]');
+            var canvas = document.createElement('canvas');
+            var supported = canvas.getContext && canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+            if (link && !supported) { link.href = link.getAttribute('data-fallback'); }
+        })();
+    </script>
+@endpush
