@@ -61,7 +61,7 @@
                                 <td>{{ $log->channel }}</td>
                                 <td>{{ $log->status }}</td>
                                 <td>{{ $log->attempts }}</td>
-                                <td>{{ optional($log->sent_at)->locale('id')->translatedFormat('j F Y, H.i') }}</td>
+                                <td>{{ $log->sent_at?->locale('id')->translatedFormat('j F Y, H.i') ?? '-' }}</td>
                                 <td>{{ $log->last_error }}</td>
                             </tr>
                         @empty

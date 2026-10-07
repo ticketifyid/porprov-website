@@ -85,6 +85,29 @@ class RegistrationAdminTest extends TestCase
             ->assertOk()->assertSee($registration->name);
     }
 
+    public function test_detail_peserta_dengan_notifikasi_pending_dan_failed_tetap_200(): void
+    {
+        $registration = $this->makeRegistration();
+        NotificationLog::create([
+            'registration_id' => $registration->id,
+            'channel' => 'email',
+            'status' => 'pending',
+            'attempts' => 0,
+        ]);
+        NotificationLog::create([
+            'registration_id' => $registration->id,
+            'channel' => 'whatsapp',
+            'status' => 'failed',
+            'attempts' => 3,
+            'last_error' => 'Koneksi gagal',
+        ]);
+
+        $this->actingAs($this->admin)->get('/admin/registrations/'.$registration->id)
+            ->assertOk()
+            ->assertSeeText('pending')
+            ->assertSeeText('failed');
+    }
+
     public function test_daftar_peserta_menampilkan_dan_menyaring_jalur_verifikasi(): void
     {
         $turnstile = $this->makeRegistration(['name' => 'Peserta Turnstile', 'verified_via' => 'turnstile']);
