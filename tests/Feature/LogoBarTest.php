@@ -92,6 +92,29 @@ class LogoBarTest extends TestCase
         }
     }
 
+    #[DataProvider('halamanPeserta')]
+    public function test_maskot_tepat_di_sebelah_kanan_logo_porprov(string $url): void
+    {
+        $html = $this->get($url)->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($html, 'alt="Maskot Porprov XVII Jawa Tengah"'));
+        $this->assertMatchesRegularExpression(
+            '#<source[^>]+srcset="[^"]*img/maskot-porprov\.webp\?v=\d+"[^>]+type="image/webp"#',
+            $html
+        );
+        $this->assertMatchesRegularExpression(
+            '#<img[^>]+src="[^"]*img/maskot-porprov\.png\?v=\d+"[^>]+width="403"[^>]+height="900"#',
+            $html
+        );
+
+        $porprov = strpos($html, 'alt="Logo Porprov XVII Jawa Tengah"');
+        $maskot = strpos($html, 'alt="Maskot Porprov XVII Jawa Tengah"');
+        $jateng = strpos($html, 'alt="Lambang Provinsi Jawa Tengah"');
+
+        $this->assertLessThan($maskot, $porprov, 'maskot harus setelah logo Porprov');
+        $this->assertLessThan($jateng, $maskot, 'maskot harus sebelum logo Jawa Tengah (satu kelompok dengan Porprov)');
+    }
+
     public function test_halaman_status_juga_memuat_bar_logo(): void
     {
         $this->event->update(['is_open' => false]);
@@ -159,7 +182,7 @@ class LogoBarTest extends TestCase
 
     public function test_file_logo_png_dan_webp_ada_di_public_img(): void
     {
-        foreach (array_keys(self::LOGOS) as $file) {
+        foreach ([...array_keys(self::LOGOS), 'maskot-porprov'] as $file) {
             $this->assertFileExists(public_path("img/{$file}.png"));
             $this->assertFileExists(public_path("img/{$file}.webp"));
         }

@@ -280,6 +280,8 @@ input, select, textarea {
 
 .logo-bar__img--main { height: 32px; }
 .logo-bar__img--small { height: 28px; }
+/* Maskot berbentuk potret (403x900), jadi lebih tinggi dari logo agar tetap terbaca. */
+.logo-bar__img--mascot { height: 44px; }
 
 @media (min-width: 992px) {
   .logo-bar__inner {
@@ -292,6 +294,7 @@ input, select, textarea {
 
   .logo-bar__img--main { height: 56px; }
   .logo-bar__img--small { height: 48px; }
+  .logo-bar__img--mascot { height: 72px; }
 }
 
 /* ---------- Header ---------- */
