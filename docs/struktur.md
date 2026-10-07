@@ -225,6 +225,14 @@ Perbaikan form `/daftar` sebelum pendaftaran resmi dibuka: Turnstile, captcha ga
 - **Tautan poster**: "Lihat poster lengkap" membuka `public/img/poster-dodont.webp` di tab baru (`target="_blank" rel="noopener"`, URL lewat `@versionedAsset`). Fallback `.jpg` disimpan di `data-fallback`; skrip kecil inline di home (`@push('scripts')`) mengalihkan `href` ke JPG hanya bila browser tidak mendukung WebP (anchor biasa tidak punya mekanisme fallback sendiri).
 - **Tes**: `tests/Feature/HomeRulesTest.php` (baru) — judul, kedua kelompok, semua 10 butir, urutan setelah "Cara mendaftar" dan sebelum footer, jam mengikuti `event_starts_at` (dan hilang saat null), tautan poster, bagian tidak muncul di `/daftar` dan `/cari-tiket`, dan beranda tetap tanpa angka kuota. Tampilan diperiksa lewat Chrome headless di 500px dan 1280px.
 
+### Penyimpangan disetujui: identitas tab browser (Ticketify)
+
+- **`resources/views/components/favicon.blade.php`** (`<x-favicon />`, di folder `components/` yang sudah ada, bukan folder partial baru): satu sumber untuk `<link rel="icon">` (`favicon.ico` any, `favicon-32.png`, `favicon-16.png`), `apple-touch-icon`, `manifest` (`site.webmanifest`), dan `<meta name="theme-color" content="#3F368F">`. Semua href lewat `@versionedAsset` (aturan 14, `?v=filemtime`) supaya browser tidak memakai favicon lama dari cache. Dipanggil di `<head>` keempat layout (`public`, `admin`, `auth`, `scanner`); baris `<link rel="shortcut icon">` lama dihapus (Metronic tidak menaruh favicon sendiri di layout ini). Berkas ikon ada di akar `public/` (bukan `public/img/`).
+- **`<title>` semua halaman = `config('app.name')`** (nilai `Ticketify`), tanpa akhiran/awalan. Akibatnya `@section('title', ...)` di view admin/peserta/scanner tidak lagi dibaca layout (sengaja dibiarkan, tidak dihapus dari view).
+- **`APP_NAME=Ticketify`** di `.env.example`; bawaan `config/app.php` diubah dari `Laravel` ke `Ticketify` supaya produksi yang lupa mengisinya tetap benar. `phpunit.xml` mengisi `APP_NAME=Ticketify` agar tes tidak bergantung `.env` lokal. `MAIL_FROM_NAME` tidak diubah (barisnya tetap `"${APP_NAME}"` di `.env.example`; produksi mengisi sendiri, lihat `docs/deploy.md`). `.env` lokal/produksi yang sudah ada tidak berubah sendiri: perlu `APP_NAME=Ticketify` + `php artisan config:cache` di server.
+- `public/site.webmanifest` memakai path ikon absolut (`/icon-192.png`, `/icon-512.png`) dan tidak diversikan di dalamnya; aman selama aplikasi dilayani dari akar domain.
+- **Tes**: `tests/Feature/FaviconTest.php` (baru) — 11 halaman (peserta, login, admin, scanner) memuat kelima link ikon + `theme-color` ber-`?v=`, tidak ada `shortcut icon`/favicon tanpa versi, `<title>Ticketify</title>` tepat satu kali, judul mengikuti `config('app.name')`.
+
 ```
 app/
   Actions/
@@ -383,6 +391,7 @@ tests/
     RegencyComboboxTest.php             # select Domisili tetap lengkap + old() terpilih
     LogoBarTest.php                     # bar logo di semua halaman peserta + tagline baru
     HomeRulesTest.php                   # ketentuan penonton (Lakukan/Jangan) di beranda
+    FaviconTest.php                     # link favicon + <title> Ticketify di semua layout
     TicketPageTest.php
     ScanTest.php
     Admin/

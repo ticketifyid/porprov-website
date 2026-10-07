@@ -82,6 +82,7 @@ belum selesai kalau ada satu baris yang tidak sesuai:
 | Kunci | Nilai produksi | Kenapa |
 |---|---|---|
 | `APP_ENV` | `production` | Mematikan `/_styleguide`, mengaktifkan `DB::prohibitDestructiveCommands` (migrate:fresh/db:wipe ditolak), dan mematikan `trustProxies(at: '*')` yang hanya untuk `local`. |
+| `APP_NAME` | `Ticketify` | Isi `<title>` semua halaman (peserta, admin, login, scanner). Kalau tidak diisi, `config/app.php` memakai `Ticketify` sebagai bawaan. `MAIL_FROM_NAME` tidak ikut berubah: isi sendiri (lihat bawah) — kalau dikosongkan, `.env.example` mewarisi `${APP_NAME}`. |
 | `APP_DEBUG` | `false` | `true` menampilkan stack trace berisi query, path, dan isi `.env` ke siapa pun yang memicu error. |
 | `APP_URL` | `https://DOMAIN` | Dipakai untuk membangun link e-ticket di notifikasi. Harus `https://`, bukan `http://`, dan tanpa garis miring di akhir. |
 | `APP_TIMEZONE` | `Asia/Jakarta` | Jadwal acara, jam penukaran gelang, dan badge "Sudah ditukar" dibaca/ditulis dalam WIB (`docs/struktur.md` Fase 6). Salah zona = jam di tiket meleset 7 jam. |

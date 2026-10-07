@@ -2,10 +2,10 @@
 <html lang="id" data-bs-theme="light">
 <head>
     <meta charset="utf-8">
-    <title>@yield('title', 'Admin') - Ticketify</title>
+    <title>{{ config('app.name') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    <x-favicon />
     <link href="{{ asset('metronic/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('metronic/css/style.bundle.css') }}" rel="stylesheet" type="text/css">
     <script>
