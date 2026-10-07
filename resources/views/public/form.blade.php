@@ -30,7 +30,7 @@
 
 @section('content')
     <div class="page-shell">
-        <x-header variant="back" :logo-size="84" :back-href="route('home')" :home-href="route('home')">
+        <x-header variant="back" :back-href="route('home')">
             <a href="{{ url('/cari-tiket') }}" class="nav-link">Cari tiket saya</a>
         </x-header>
 

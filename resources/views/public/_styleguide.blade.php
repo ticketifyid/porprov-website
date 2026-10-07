@@ -82,7 +82,7 @@
             <div class="sg-row" style="flex-direction: column; gap: 12px;">
                 <div class="eyebrow">Pendaftaran penonton</div>
                 <h1 class="h1-hero">Opening Ceremony Porprov Jateng XVII 2026</h1>
-                <div class="tagline-caveat">Satu langkah menuju semangat Jawa Tengah!</div>
+                <div class="tagline-caveat">Ngopeni Nglakoni Menuju Puncak Prestasi Jawa Tengah</div>
                 <h1 class="h1-page">Form pendaftaran</h1>
                 <p>Body text 15/16px, line-height 1.55 — teks paragraf standar untuk seluruh halaman peserta.</p>
             </div>
@@ -95,16 +95,19 @@
         </div>
 
         <div class="sg-section">
+            <h2>Bar logo</h2>
+            <div class="sg-label">Putih, tepat di bawah strip 4 warna di semua halaman peserta. Satu baris di mobile (Porprov 32px, lainnya 28px); &ge; 992px Porprov 56px, lainnya 48px</div>
+            <div class="sg-card-frame">
+                <x-logo-bar />
+            </div>
+        </div>
+
+        <div class="sg-section">
             <h2>Header</h2>
 
-            <div class="sg-label">Mobile — variant "back" (Form, Cari tiket)</div>
+            <div class="sg-label">Mobile — variant "back" (Form, Cari tiket); halaman lain tanpa header mobile (variant "none")</div>
             <div class="sg-card-frame" style="margin-bottom: 24px;">
-                <x-header variant="back" :logo-size="84" />
-            </div>
-
-            <div class="sg-label">Mobile — variant "logo" (Sukses, Status)</div>
-            <div class="sg-card-frame" style="margin-bottom: 24px;">
-                <x-header variant="logo" :logo-size="120" />
+                <x-header variant="back" />
             </div>
 
             <div class="sg-label">Desktop — bar penuh (resize browser &ge; 992px untuk melihat)</div>

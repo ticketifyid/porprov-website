@@ -18,10 +18,10 @@ Catatan penting:
 
 ### Penyimpangan disetujui pada Fase 3
 
-- `public/img/` (folder baru, tidak ada di struktur awal): berisi `logo-porprov.png`, dipakai oleh komponen `x-logo`. Sesuai catatan di `docs/design/DESIGN.md`, file ini masih potongan resolusi rendah dan harus diganti logo asli panitia sebelum go-live.
+- `public/img/` (folder baru, tidak ada di struktur awal): awalnya berisi `logo-porprov.png` (potongan resolusi rendah, dipakai komponen `x-logo`). Sudah diganti logo resmi dan komponen `x-logo` dihapus; lihat "Penyimpangan disetujui: bar logo resmi" di bawah.
 - `public/js/` diisi dua file dari daftar di bawah: `stepper.js` (aturan stepper DESIGN.md) dan `email-domain.js` (pecah-otomatis email yang di-paste + pratinjau "Email lengkap"). `scanner-hardware.js` dan `scanner-camera.js` baru dibuat pada Fase 7.
 - `resources/views/components/` diisi 14 Blade component (daftar lengkap, menggantikan "dst" pada struktur di bawah):
-  `strip-porprov`, `header` (varian `back` / `logo` / `none`), `logo`, `icon` (satu-satunya sumber SVG garis inline), `button-primary`, `button-secondary`, `field`, `field-email`, `stepper`, `alert` (`warn` / `info`), `badge` (`success` / `info`), `step-number` (`default` / `success` / `inverse`), `ticket-card`, `ticket-perforation` (`horizontal` / `vertical`).
+  `strip-porprov`, `logo-bar` (menggantikan `logo`, lihat catatan bar logo), `header` (varian `back` / `none`), `icon` (satu-satunya sumber SVG garis inline), `button-primary`, `button-secondary`, `field`, `field-email`, `stepper`, `alert` (`warn` / `info`), `badge` (`success` / `info`), `step-number` (`default` / `success` / `inverse`), `ticket-card`, `ticket-perforation` (`horizontal` / `vertical`).
 
 ### Penyimpangan disetujui pada Fase 4
 
@@ -206,6 +206,16 @@ Perbaikan form `/daftar` sebelum pendaftaran resmi dibuka: Turnstile, captcha ga
 - **CSS**: bagian "Combobox Domisili" di `public/css/app.css`. Kotak input memakai gaya `.field input` yang sudah ada (tinggi 50px, border 1.5px `--input-border`, radius 12px, 16px); daftar memakai `--surface`, `--input-border`, `--ground` (hover), `--info-bg`/`--info-ink` (sorotan), `--muted` ("Tidak ditemukan"), radius 12px. Bayangan daftar `0 8px 24px rgba(11, 27, 63, 0.12)` (warna `--ink`) tidak ada di `DESIGN.md`.
 - **Tes**: `tests/Feature/RegencyComboboxTest.php` (baru) — select tetap memuat 36 pilihan berurutan `sort_order` + pilihan kosong, "Luar Jawa Tengah" bertanda `data-combobox-always`, skrip dimuat, dan `old('regency_id')` terpilih setelah error validasi. Perilaku JS (ARIA, pencarian, keyboard, blur, klik) diperiksa manual lewat Chrome headless; tidak ada tes JS otomatis karena proyek ini tanpa tooling Node.
 
+### Penyimpangan disetujui: bar logo resmi dan tagline baru
+
+- **Penyimpangan desain** (permintaan pemilik proyek): artboard menaruh logo Porprov di header (mobile 84–132 px, desktop 112 px). Kini logo resmi tampil di **bar logo** putih tepat di bawah strip 4 warna pada SEMUA halaman peserta, dan header tidak lagi berisi logo. `docs/design/DESIGN.md` bagian Header dan Tipografi sudah diperbarui; artboard `*.dc.html` tidak diubah selain teks tagline, jadi masih menggambar logo lama di header.
+- **`resources/views/components/logo-bar.blade.php`** (`<x-logo-bar />`, dipanggil sekali di `layouts/public.blade.php` setelah `<x-strip-porprov />`; tidak tampil di halaman scanner/admin). Kiri logo Porprov, tengah Jawa Tengah + KONI Jateng, kanan Ngopeni Nglakoni Jateng, lewat grid `1fr auto 1fr` supaya kelompok tengah benar-benar di tengah. Tinggi: desktop (≥ 992px) 56px untuk Porprov dan 48px lainnya, padding sisi 80px, jarak logo tengah 16px; mobile 32px / 28px, padding 16px, jarak 8px, tetap satu baris (diperiksa sampai lebar 320px). Warna latar `--surface` (putih), juga di halaman e-ticket berlatar navy.
+- **Gambar**: `<picture>` dengan `<source type="image/webp">` dan fallback `<img>` PNG, `width`/`height` = ukuran asli berkas (tinggi 192px; Porprov 529, Jateng 173, KONI 158, Ngopeni 375) supaya tata letak tidak bergeser, tinggi tampil diatur CSS. URL lewat `@versionedAsset` (aturan 14; `AssetVersion` sudah mendokumentasikan `public/img`). Alt: "Logo Porprov XVII Jawa Tengah", "Lambang Provinsi Jawa Tengah", "Logo KONI Jawa Tengah", "Ngopeni Nglakoni Jateng".
+- **`x-logo` dihapus** (komponen dan semua pemakaiannya, termasuk logo 132px di hero beranda mobile). `x-header` kehilangan props `logoSize`, `homeHref`, `linkLogo` dan varian `logo` (Status dan Sukses kini `variant="none"`, yang di mobile memang tidak merender header). Header desktop kini hanya berisi navigasi, **rata kanan**, dan tingginya turun dari 84px ke 64px karena logo sudah tidak ada di dalamnya (nilai 64px adalah keputusan penyesuaian ini, bukan angka dari artboard).
+- **`public/img/logo-porprov.png` tidak dihapus**: berkas itu sudah diganti logo resmi dan kini menjadi fallback PNG bar logo, jadi masih dirujuk. Rujukan ke logo LAMA (alt "Logo Porprov Jawa Tengah XVII 2026", `x-logo`) sudah tidak ada. `public/img/maskot-porprov.{png,webp}` ada di folder tapi belum dipakai di mana pun dan tidak ikut commit ini.
+- **Tagline beranda** "Satu langkah menuju semangat Jawa Tengah!" → "Ngopeni Nglakoni Menuju Puncak Prestasi Jawa Tengah" (view beranda, `_styleguide`, `DESIGN.md`, artboard `Main`/`DesktopMain`, `RegistrationTest`). Gaya tetap (Caveat, `-2deg`, navy, 28px/38px); karena lebih panjang, `.tagline-caveat` diberi `text-wrap: balance` sehingga membungkus jadi dua baris seimbang di 390px dan 1280px tanpa menabrak judul di atas maupun kartu fakta di bawahnya.
+- **Tes**: `tests/Feature/LogoBarTest.php` (baru) — keempat logo dengan alt benar, sumber WebP + fallback PNG ber-`width`/`height` + versi `?v=` di beranda, form, sukses, tiket, cari tiket, dan status; bar tepat setelah strip dan sebelum isi halaman; tidak ada rujukan logo lama; beranda memuat tagline baru dan tidak lagi tagline lama (juga di seluruh `resources/views` dan `docs/design`). Tampilan diperiksa manual lewat Chrome headless di 320/390/500/1280px.
+
 ```
 app/
   Actions/
@@ -296,7 +306,7 @@ resources/
       public.blade.php                  # font Plus Jakarta Sans + Caveat
       admin.blade.php                   # Metronic (dipasang setelah Fase 2, lihat catatan di atas)
       scanner.blade.php                 # Metronic app-blank tanpa sidebar, ditambahkan Fase 7
-    components/                         # strip-porprov, header, button-primary, field, stepper, ticket-card, dst
+    components/                         # strip-porprov, logo-bar, header, button-primary, field, stepper, ticket-card, dst
     public/
       home.blade.php
       form.blade.php
@@ -326,7 +336,7 @@ public/
   css/
     app.css
     scanner.css                         # panel hasil scan, ditambahkan Fase 7
-  img/                                  # logo-porprov.png, hero-qr.svg (hiasan hero desktop)
+  img/                                  # logo-{porprov,jateng,koni-jateng,ngopeni-nglakoni}.{webp,png} (bar logo), hero-qr.svg (hiasan hero desktop)
   metronic/                             # disiapkan pemilik proyek sebelum Fase 2
   js/
     stepper.js
@@ -362,6 +372,7 @@ tests/
     CaptchaTest.php                     # captcha gambar + throttle — perbaikan pra-pembukaan
     NotificationChannelTextTest.php     # teks "email" vs "email dan WhatsApp" — perbaikan pra-pembukaan
     RegencyComboboxTest.php             # select Domisili tetap lengkap + old() terpilih
+    LogoBarTest.php                     # bar logo di semua halaman peserta + tagline baru
     TicketPageTest.php
     ScanTest.php
     Admin/

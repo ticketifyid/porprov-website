@@ -268,7 +268,7 @@ class RegistrationTest extends TestCase
 
         $response->assertOk();
         $response->assertSeeText($this->event->name);
-        $response->assertSeeText('Satu langkah menuju semangat Jawa Tengah!');
+        $response->assertSeeText('Ngopeni Nglakoni Menuju Puncak Prestasi Jawa Tengah');
         $response->assertSeeText('18 Juli 2026, 19.00');
         $response->assertSeeText('Stadion Jatidiri, Semarang');
         $response->assertSeeText('Cara mendaftar');

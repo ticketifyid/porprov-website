@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="page-shell centered-page">
-        <x-header variant="logo" :logo-size="120" :link-logo="false">
+        <x-header variant="none">
             @if ($showFind)
                 <a href="{{ url('/cari-tiket') }}" class="nav-link">Cari tiket saya</a>
             @endif

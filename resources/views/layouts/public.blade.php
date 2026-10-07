@@ -14,6 +14,7 @@
 </head>
 <body class="@yield('body_class')">
     <x-strip-porprov />
+    <x-logo-bar />
 
     @yield('content')
 

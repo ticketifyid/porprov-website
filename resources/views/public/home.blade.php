@@ -5,7 +5,7 @@
 @section('content')
     <div class="page-shell">
         <div class="home-top">
-            <x-header variant="none" :link-logo="false">
+            <x-header variant="none">
                 <a href="#cara" class="nav-link">Cara mendaftar</a>
                 <a href="{{ url('/cari-tiket') }}" class="nav-link">Cari tiket saya</a>
                 <a href="{{ route('daftar') }}" class="btn-primary-sm">Daftar</a>
@@ -13,12 +13,10 @@
 
             <div class="home-hero">
                 <div class="home-hero__copy">
-                    <x-logo :size="132" class="u-mobile-only" />
-
                     <div class="home-hero__text">
                         <div class="eyebrow">Pendaftaran penonton</div>
                         <h1 class="h1-hero">{{ $eventName }}</h1>
-                        <div class="tagline-caveat">Satu langkah menuju semangat Jawa Tengah!</div>
+                        <div class="tagline-caveat">Ngopeni Nglakoni Menuju Puncak Prestasi Jawa Tengah</div>
                     </div>
 
                     <div class="home-facts">

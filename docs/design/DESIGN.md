@@ -56,7 +56,7 @@ Tulis sebagai CSS custom properties di `:root` dalam `public/css/app.css`.
 ### Tipografi
 
 - Font utama: **Plus Jakarta Sans** (400, 500, 600, 700, 800), fallback `system-ui, sans-serif`.
-- Font aksen: **Caveat** 700, HANYA untuk tagline "Satu langkah menuju semangat Jawa Tengah!" di beranda, diputar `-2deg`.
+- Font aksen: **Caveat** 700, HANYA untuk tagline "Ngopeni Nglakoni Menuju Puncak Prestasi Jawa Tengah" di beranda, diputar `-2deg`. Teksnya panjang sehingga membungkus jadi dua baris; `text-wrap: balance` menyeimbangkan barisnya (28 px mobile, 38 px desktop, tidak berubah).
 - Muat dari Google Fonts lewat `<link>` di layout. Tidak ada font lain.
 
 | Elemen | Mobile | Desktop | Weight |
@@ -80,7 +80,8 @@ Tulis sebagai CSS custom properties di `:root` dalam `public/css/app.css`.
 ## Komponen (jadikan Blade component/partial)
 
 - **Strip Porprov**: grid 4 kolom sama lebar, tinggi 6 px, di puncak setiap halaman.
-- **Header**: mobile = tombol Kembali + logo kecil (84 px); desktop = bar putih 84 px, logo 112 px kiri, link/tombol kanan.
+- **Bar logo** (`<x-logo-bar>`, di layout publik): bar putih tepat di bawah strip Porprov di SEMUA halaman peserta, termasuk e-ticket berlatar navy. Satu baris, tiga kelompok: kiri logo Porprov; tengah logo Jawa Tengah + KONI Jateng berdampingan; kanan logo Ngopeni Nglakoni Jateng. Desktop (≥ 992 px): tinggi logo Porprov 56 px, lainnya 48 px, padding sisi 80 px, jarak logo tengah 16 px. Mobile: Porprov 32 px, lainnya 28 px, padding sisi 16 px, jarak logo tengah 8 px. `<picture>` WebP + fallback PNG dengan `width`/`height` asli berkas; berkas di `public/img/logo-*.{webp,png}`.
+- **Header** (di bawah bar logo, tanpa logo): mobile = tombol Kembali saja (halaman tanpa tombol Kembali tidak punya header mobile); desktop = bar putih 64 px, link/tombol rata kanan.
 - **Tombol utama**: latar `--navy`, teks putih. **Tombol sekunder**: border 1.5 px `--input-border` atau `--navy`, teks navy.
 - **Field**: label di atas, input, helper di bawah.
 - **Stepper jumlah tiket**: `−` [angka] `+`, lihat aturan di bawah.
@@ -135,4 +136,4 @@ Tulis sebagai CSS custom properties di `:root` dalam `public/css/app.css`.
 - Jangan mengganti font atau memakai font default framework.
 - Jangan memakai Tailwind, Vite, atau proses build lain untuk halaman ini; CSS ditulis tangan di satu file statis.
 - Jangan menampilkan sisa kuota di awal halaman.
-- Logo `assets/logo-porprov.png` hanya potongan resolusi rendah; ganti dengan file logo asli dari panitia sebelum go-live.
+- Logo resmi sudah dipasang (lihat Bar logo); tidak ada lagi logo di dalam header.
