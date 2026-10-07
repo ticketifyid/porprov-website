@@ -109,11 +109,11 @@
             <div class="rules-grid">
                 @foreach ([['do', 'check', 'Lakukan', $lakukan], ['dont', 'close', 'Jangan', $jangan]] as [$kind, $badge, $title, $items])
                     <section class="rules-card rules-card--{{ $kind }}">
-                        <h3 class="rules-card__title"><span class="rules-card__badge"><x-icon :name="$badge" :size="20" :stroke="2.4" /></span>{{ $title }}</h3>
+                        <h3 class="rules-card__title"><span class="step-number step-number--{{ $kind === 'do' ? 'success' : 'danger' }}"><x-icon :name="$badge" :size="18" :stroke="3" /></span>{{ $title }}</h3>
                         <ul class="rules-list">
                             @foreach ($items as [$icon, $text])
                                 <li class="rules-list__item">
-                                    <span class="rules-list__icon"><x-icon :name="$icon" :size="22" /></span>
+                                    <x-icon :name="$icon" :size="22" />
                                     <span>{{ $text }}</span>
                                 </li>
                             @endforeach

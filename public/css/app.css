@@ -1005,6 +1005,11 @@ input, select, textarea {
   color: #FFFFFF;
 }
 
+.step-number--danger {
+  background: var(--porprov-3);
+  color: #FFFFFF;
+}
+
 .step-number--inverse {
   background: #FFFFFF;
   color: var(--navy);
@@ -1015,7 +1020,8 @@ input, select, textarea {
 
 @media (min-width: 992px) {
   .step-number--default,
-  .step-number--success {
+  .step-number--success,
+  .step-number--danger {
     width: 40px;
     height: 40px;
     font-size: 17px;
@@ -1490,6 +1496,9 @@ input, select, textarea {
 
 /* ---------- Ketentuan penonton (beranda) ---------- */
 
+/* Mengikuti pola "Cara mendaftar": mobile = daftar datar di atas latar halaman,
+   desktop = kartu putih radius 20px tanpa border. Lingkaran judul memakai .step-number. */
+
 .home-rules {
   padding: 8px 24px 32px;
   display: flex;
@@ -1504,18 +1513,13 @@ input, select, textarea {
 }
 
 .rules-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .rules-card {
   --accent: var(--porprov-1);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-top: 4px solid var(--accent);
-  border-radius: 16px;
-  padding: 20px;
 }
 
 .rules-card--dont {
@@ -1525,53 +1529,33 @@ input, select, textarea {
 .rules-card__title {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 18px;
-  font-weight: 800;
+  gap: 14px;
+  font-size: 17px;
+  font-weight: 700;
   color: var(--navy);
-}
-
-.rules-card__badge {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--surface);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
 }
 
 .rules-list {
   list-style: none;
-  margin: 16px 0 0;
+  margin: 14px 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .rules-list__item {
   display: flex;
-  align-items: center;
   gap: 12px;
+  align-items: center;
   font-size: 15px;
   font-weight: 600;
-  line-height: 1.4;
-  color: var(--ink);
+  color: var(--navy);
 }
 
-.rules-list__icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 1.5px solid var(--accent);
-  color: var(--accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.rules-list__item svg {
   flex: none;
+  color: var(--accent);
 }
 
 .rules-poster-link {
@@ -1589,20 +1573,19 @@ input, select, textarea {
   }
 
   .rules-grid {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 24px;
+    gap: 20px;
   }
 
   .rules-card {
-    padding: 28px;
+    background: #FFFFFF;
+    border-radius: 20px;
+    padding: 24px;
   }
 
-  .rules-card__title {
-    font-size: 20px;
-  }
-
-  .rules-list__item {
-    font-size: 16px;
+  .rules-list {
+    margin-top: 16px;
   }
 }
 
