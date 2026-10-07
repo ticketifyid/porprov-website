@@ -8,6 +8,7 @@
     <x-favicon />
     <link href="{{ asset('metronic/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('metronic/css/style.bundle.css') }}" rel="stylesheet" type="text/css">
+    <link href="@versionedAsset('css/admin.css')" rel="stylesheet" type="text/css">
     <script>
         var defaultThemeMode = "system";
         var themeMode;
@@ -229,6 +230,11 @@
                                     <h1 class="page-heading d-flex text-gray-900 fw-bold fs-3 flex-column justify-content-center my-0">
                                         @yield('page_title', 'Dashboard')
                                     </h1>
+                                    @hasSection('breadcrumb')
+                                        <ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
+                                            @yield('breadcrumb')
+                                        </ul>
+                                    @endif
                                 </div>
                                 <div class="d-flex align-items-center gap-2 gap-lg-3">
                                     @yield('toolbar_actions')
@@ -263,6 +269,7 @@
     <script>var hostUrl = "{{ asset('metronic') }}/";</script>
     <script src="{{ asset('metronic/plugins/global/plugins.bundle.js') }}"></script>
     <script src="{{ asset('metronic/js/scripts.bundle.js') }}"></script>
+    <script src="@versionedAsset('js/admin.js')"></script>
     @stack('scripts')
 </body>
 </html>

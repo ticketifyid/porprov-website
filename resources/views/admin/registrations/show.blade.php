@@ -2,6 +2,13 @@
 
 @section('title', 'Detail Peserta')
 @section('page_title', 'Detail Peserta')
+@section('breadcrumb')
+    <li class="breadcrumb-item text-muted"><a href="{{ route('admin.dashboard') }}" class="text-muted text-hover-primary">Admin</a></li>
+    <li class="breadcrumb-item"><span class="bullet bg-gray-400 w-5px h-2px"></span></li>
+    <li class="breadcrumb-item text-muted"><a href="{{ route('admin.registrations.index') }}" class="text-muted text-hover-primary">Peserta</a></li>
+    <li class="breadcrumb-item"><span class="bullet bg-gray-400 w-5px h-2px"></span></li>
+    <li class="breadcrumb-item text-muted">Detail</li>
+@endsection
 
 @section('content')
     @if (session('status'))
@@ -12,8 +19,10 @@
     @endif
 
     <div class="card mb-5">
+        <div class="card-header">
+            <h3 class="card-title">{{ $registration->name }}</h3>
+        </div>
         <div class="card-body">
-            <h3>{{ $registration->name }}</h3>
             <p class="text-muted mb-1">Kode: {{ $registration->code }}</p>
             <p class="text-muted mb-1">Kab/Kota: {{ $registration->regency?->name }}</p>
             <p class="text-muted mb-1">Email: {{ $registration->email }}</p>
@@ -57,12 +66,28 @@
                     </thead>
                     <tbody>
                         @forelse ($registration->notificationLogs as $log)
+                            @php
+                                $statusBadge = match ($log->status) {
+                                    'sent' => ['badge-light-success', 'Terkirim'],
+                                    'pending' => ['badge-light-warning', 'Menunggu'],
+                                    'failed' => ['badge-light-danger', 'Gagal'],
+                                    default => ['badge-light', $log->status],
+                                };
+                            @endphp
                             <tr>
                                 <td>{{ $log->channel }}</td>
-                                <td>{{ $log->status }}</td>
+                                <td><span class="badge {{ $statusBadge[0] }}">{{ $statusBadge[1] }}</span></td>
                                 <td>{{ $log->attempts }}</td>
                                 <td>{{ $log->sent_at?->locale('id')->translatedFormat('j F Y, H.i') ?? '-' }}</td>
-                                <td>{{ $log->last_error }}</td>
+                                <td>
+                                    @if ($log->last_error)
+                                        <span class="text-muted">Error teknis:</span>
+                                        <span class="text-truncate notif-error-text d-inline-block align-bottom"
+                                              data-bs-toggle="tooltip" title="{{ $log->last_error }}">{{ $log->last_error }}</span>
+                                    @else
+                                        <span class="text-muted">—</span>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr><td colspan="5" class="text-muted">Belum ada percobaan pengiriman.</td></tr>
@@ -82,9 +107,13 @@
 
     @if (! $registration->cancelled_at && ! $registration->redeemed_at)
         <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Zona berbahaya</h3>
+            </div>
             <div class="card-body">
                 <form method="POST" action="{{ route('admin.registrations.cancel', $registration) }}"
-                      onsubmit="return confirm('Batalkan registrasi ini? Kuota akan dikembalikan.');">
+                      data-confirm="Batalkan registrasi ini?"
+                      data-confirm-detail="Kuota {{ $registration->ticket_qty }} tiket akan dikembalikan. Tindakan ini tidak bisa dibatalkan.">
                     @csrf
                     <button type="submit" class="btn btn-danger">Batalkan registrasi</button>
                 </form>

@@ -54,6 +54,8 @@ Route::post('/logout', [LoginController::class, 'logout'])
 Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/', DashboardController::class)->name('dashboard');
+        Route::get('/dashboard-data', [DashboardController::class, 'data'])->name('dashboard.data');
+        Route::post('/dashboard/resend-failed', [DashboardController::class, 'resendFailed'])->name('dashboard.resend-failed');
 
         Route::get('/events', [EventController::class, 'edit'])->name('events.edit');
         Route::put('/events', [EventController::class, 'update'])->name('events.update');

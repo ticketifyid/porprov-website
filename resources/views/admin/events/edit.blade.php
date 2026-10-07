@@ -2,13 +2,22 @@
 
 @section('title', 'Pengaturan Event')
 @section('page_title', 'Pengaturan Event')
+@section('breadcrumb')
+    <li class="breadcrumb-item text-muted">Admin</li>
+    <li class="breadcrumb-item"><span class="bullet bg-gray-400 w-5px h-2px"></span></li>
+    <li class="breadcrumb-item text-muted">Pengaturan Event</li>
+@endsection
 
 @section('content')
+    @if (session('status'))
+        <div class="alert alert-success">{{ session('status') }}</div>
+    @endif
+
     <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Informasi event</h3>
+        </div>
         <div class="card-body">
-            @if (session('status'))
-                <div class="alert alert-success">{{ session('status') }}</div>
-            @endif
 
             <form method="POST" action="{{ route('admin.events.update') }}">
                 @csrf

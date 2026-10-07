@@ -21,10 +21,15 @@ class RegistrationAdminController extends Controller
         $keyword = trim((string) $request->query('q', ''));
         $via = (string) $request->query('via', '');
         $via = array_key_exists($via, Registration::VERIFIED_VIA) ? $via : '';
+        $notif = (string) $request->query('notif', '');
+        $notif = $notif === 'failed' ? $notif : '';
 
         $registrations = Registration::query()
             ->with('regency')
             ->when($via !== '', fn ($query) => $query->where('verified_via', $via))
+            ->when($notif === 'failed', function ($query) {
+                $query->whereHas('notificationLogs', fn ($query) => $query->where('status', 'failed'));
+            })
             ->when($keyword !== '', function ($query) use ($keyword) {
                 $escaped = addcslashes($keyword, '%_\\');
 
@@ -38,7 +43,12 @@ class RegistrationAdminController extends Controller
             ->paginate(self::PER_PAGE)
             ->withQueryString();
 
-        return view('admin.registrations.index', ['registrations' => $registrations, 'keyword' => $keyword, 'via' => $via]);
+        return view('admin.registrations.index', [
+            'registrations' => $registrations,
+            'keyword' => $keyword,
+            'via' => $via,
+            'notif' => $notif,
+        ]);
     }
 
     public function show(Registration $registration): View

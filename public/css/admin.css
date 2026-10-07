@@ -1,0 +1,8 @@
+/* Fase 11: halaman admin (Metronic). Hanya aturan yang tidak ada komponen
+   Metronic-nya; selebihnya pakai class Metronic/Bootstrap yang sudah ada. */
+
+/* Potongan teks error notifikasi di detail peserta, dengan tooltip Metronic
+   (data-bs-toggle="tooltip") untuk menampilkan pesan lengkapnya. */
+.notif-error-text {
+    max-width: 260px;
+}

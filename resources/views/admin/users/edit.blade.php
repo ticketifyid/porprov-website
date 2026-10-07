@@ -2,11 +2,21 @@
 
 @section('title', 'Ubah Akun Petugas')
 @section('page_title', 'Ubah Akun Petugas')
+@section('breadcrumb')
+    <li class="breadcrumb-item text-muted"><a href="{{ route('admin.dashboard') }}" class="text-muted text-hover-primary">Admin</a></li>
+    <li class="breadcrumb-item"><span class="bullet bg-gray-400 w-5px h-2px"></span></li>
+    <li class="breadcrumb-item text-muted"><a href="{{ route('admin.users.index') }}" class="text-muted text-hover-primary">Akun Petugas</a></li>
+    <li class="breadcrumb-item"><span class="bullet bg-gray-400 w-5px h-2px"></span></li>
+    <li class="breadcrumb-item text-muted">Ubah</li>
+@endsection
 
 @section('content')
     @php $isSelf = auth()->id() === $user->id; @endphp
 
     <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Formulir akun petugas</h3>
+        </div>
         <div class="card-body">
             <form method="POST" action="{{ route('admin.users.update', $user) }}">
                 @csrf

@@ -104,8 +104,8 @@ class RegistrationAdminTest extends TestCase
 
         $this->actingAs($this->admin)->get('/admin/registrations/'.$registration->id)
             ->assertOk()
-            ->assertSeeText('pending')
-            ->assertSeeText('failed');
+            ->assertSeeText('Menunggu')
+            ->assertSeeText('Gagal');
     }
 
     public function test_daftar_peserta_menampilkan_dan_menyaring_jalur_verifikasi(): void
@@ -138,6 +138,24 @@ class RegistrationAdminTest extends TestCase
 
         $this->actingAs($this->admin)->get('/admin/registrations/'.$captcha->id)
             ->assertOk()->assertSeeText('Captcha gambar');
+    }
+
+    public function test_daftar_peserta_bisa_disaring_notifikasi_gagal(): void
+    {
+        $failed = $this->makeRegistration(['name' => 'Peserta Gagal']);
+        NotificationLog::create(['registration_id' => $failed->id, 'channel' => 'email', 'status' => 'failed']);
+
+        $ok = $this->makeRegistration(['name' => 'Peserta Lancar']);
+        NotificationLog::create(['registration_id' => $ok->id, 'channel' => 'email', 'status' => 'sent', 'sent_at' => now()]);
+
+        $this->actingAs($this->admin)->get('/admin/registrations?notif=failed')
+            ->assertOk()
+            ->assertSee($failed->code)
+            ->assertDontSee($ok->code);
+
+        // Nilai selain "failed" diabaikan, bukan error.
+        $this->actingAs($this->admin)->get('/admin/registrations?notif=xss')
+            ->assertOk()->assertSee($ok->code);
     }
 
     // ---------- pembatalan ----------
