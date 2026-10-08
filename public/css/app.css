@@ -543,6 +543,31 @@ input, select, textarea {
   color: var(--error);
 }
 
+/* Fase 10: checkbox persetujuan WhatsApp, tidak ada di docs/design/DESIGN.md
+   (field baru). Memakai token yang sudah ada, bukan nilai baru. */
+.field--checkbox {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.field__checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.field__checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin-top: 2px;
+}
+
 @media (min-width: 992px) {
   .field-grid {
     display: grid;

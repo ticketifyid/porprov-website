@@ -21,3 +21,13 @@ Schedule::command('queue:work --stop-when-empty --max-time=50')
     // seluruh notifikasi berhenti sampai besok; dengan 5 menit, cron menit
     // berikutnya paling lama menunggu 5 menit lalu jalan lagi sendiri.
     ->withoutOverlapping(5);
+
+/*
+ * Outbox WhatsApp (docs/notifikasi.md): satu pesan per eksekusi, tidak pernah
+ * paralel. withoutOverlapping tanpa argumen = kunci 24 jam, aman di sini
+ * karena satu eksekusi selesai dalam hitungan detik (tidak seperti queue:work
+ * yang bisa hidup sampai 50 detik).
+ */
+Schedule::command('wa:send-next')
+    ->everyMinute()
+    ->withoutOverlapping();

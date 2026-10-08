@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 // code, token, verified_via, redeemed_*, dan cancelled_* sengaja tidak fillable:
 // hanya Action yang boleh mengisinya (lewat forceFill / update bersyarat).
-#[Fillable(['event_id', 'name', 'regency_id', 'email', 'email_canonical', 'phone', 'ticket_qty', 'ip_address'])]
+#[Fillable(['event_id', 'name', 'regency_id', 'email', 'email_canonical', 'phone', 'wa_consent', 'ticket_qty', 'ip_address'])]
 class Registration extends Model
 {
     /**
@@ -31,6 +31,7 @@ class Registration extends Model
     {
         return [
             'ticket_qty' => 'integer',
+            'wa_consent' => 'boolean',
             'redeemed_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];

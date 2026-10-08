@@ -1,6 +1,6 @@
 # Notifikasi e-ticket
 
-Dokumen ini untuk orang yang mengurus pengiriman asli (Fase 10 di `docs/prompts.md`): email lewat SMTP dan WhatsApp lewat VPS. **Email sudah diimplementasikan** (`TICKET_NOTIFIER=mail`, lihat di bawah). WhatsApp belum: sampai ada, pesan WA hanya ditulis ke log.
+Dokumen ini untuk orang yang mengurus pengiriman asli (Fase 10 di `docs/prompts.md`): email lewat SMTP dan WhatsApp lewat WAHA di VPS. **Email sudah diimplementasikan** (`TICKET_NOTIFIER=mail`, lihat di bawah). **WhatsApp juga sudah diimplementasikan** (`TICKET_WA_DRIVER=waha`, lihat "Outbox WhatsApp" di bawah) tapi dikirim lewat command terjadwal, BUKAN lewat job — alurnya beda dari email.
 
 ## Alur
 
@@ -9,17 +9,18 @@ POST /daftar
   └─ RegisterAttendee (DB::transaction, lockForUpdate, insert registrations)
      ── COMMIT ──
         └─ RegistrationController::queueNotifications()
-             ├─ notification_logs: 1 baris per kanal, status 'pending'
-             └─ SendTicketNotification::dispatch($registrationId, 'email' | 'whatsapp')
+             ├─ email:    notification_logs 'pending' + SendTicketNotification::dispatch(...)
+             └─ whatsapp: notification_logs 'pending' (jika wa_consent) atau 'skipped' (jika tidak)
+                          — TIDAK dispatch job, lihat "Outbox WhatsApp" di bawah
 
 cron tiap menit → schedule:run → queue:work --stop-when-empty --max-time=50
-  └─ SendTicketNotification::handle(TicketNotifier $notifier)
+  └─ SendTicketNotification::handle(TicketNotifier $notifier)  [kanal email saja]
        ├─ sukses → notification_logs: status 'sent', sent_at, provider_message_id
        ├─ gagal  → attempts++, last_error, status tetap 'pending', exception dilempar ulang
        └─ gagal di percobaan ke-3 → failed(): status 'failed', last_error
 ```
 
-Notifikasi **tidak pernah** dikirim di dalam transaksi atau sinkron di dalam request (aturan 8 `CLAUDE.md`).
+Notifikasi **tidak pernah** dikirim di dalam transaksi atau sinkron di dalam request (aturan 8 `CLAUDE.md`). Kanal WhatsApp sengaja menyimpang dari alur job/queue di atas sejak Fase 10 — lihat "Outbox WhatsApp".
 
 ## Kontrak `App\Contracts\TicketNotifier`
 
@@ -53,7 +54,7 @@ Catatan: kirim e-ticket ke kolom `email`, **bukan** `email_canonical`. `email_ca
 | Nilai `TICKET_NOTIFIER` | Kelas | Perilaku |
 |---|---|---|
 | `log` (default) | `App\Services\Notifications\LogTicketNotifier` | Tidak mengirim apa pun. Menulis satu baris `Log::info` per notifikasi dan mengembalikan id `log-{uuid}`. |
-| `mail` (produksi) | `App\Services\Notifications\MailTicketNotifier` | **Email:** Mailable `App\Mail\TicketMail` dikirim langsung (`Mail::to(...)->send(...)`, bukan queue, karena sudah berjalan di dalam job) ke kolom `email`, lewat mailer default (`MAIL_MAILER`). Mengembalikan Message-ID sebagai `provider_message_id`. Exception transport tidak ditangkap, jadi job mencatat gagal dan queue melakukan retry. **WhatsApp:** diteruskan ke `LogTicketNotifier` (di-inject lewat constructor) sampai implementasi WA dibuat. |
+| `mail` (produksi) | `App\Services\Notifications\MailTicketNotifier` | **Email:** Mailable `App\Mail\TicketMail` dikirim langsung (`Mail::to(...)->send(...)`, bukan queue, karena sudah berjalan di dalam job) ke kolom `email`, lewat mailer default (`MAIL_MAILER`). Mengembalikan Message-ID sebagai `provider_message_id`. Exception transport tidak ditangkap, jadi job mencatat gagal dan queue melakukan retry. **WhatsApp:** tergantung `TICKET_WA_DRIVER` — `waha` kirim sungguhan lewat WAHA (lihat "Outbox WhatsApp" di bawah), selain itu (default `log`) diteruskan ke `LogTicketNotifier`. |
 
 Nilai lain sengaja **melempar `InvalidArgumentException`** saat resolve, bukan diam-diam jatuh ke `log`. Salah ketik di produksi harus langsung terlihat, bukan berakhir "semua tercatat sent tapi tidak ada yang menerima".
 
@@ -74,6 +75,63 @@ Nilai lain sengaja **melempar `InvalidArgumentException`** saat resolve, bukan d
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | Kredensial mailbox, hanya di `.env`. |
 | `MAIL_FROM_ADDRESS` / `MAIL_FROM_NAME` | Alamat di domain yang SPF/DKIM-nya sudah benar (lihat `docs/deploy.md`). |
 | `MAIL_TIMEOUT` | Default 10 detik (`config/mail.php`). Supaya server SMTP yang menggantung tidak menghabiskan jatah 50 detik worker. |
+
+## Outbox WhatsApp
+
+Nomor WhatsApp pengirim **tidak resmi** dan berisiko dibanned, jadi pengirimannya diatur jauh lebih ketat daripada email: satu pesan per eksekusi command, jeda acak, jam kirim, batas harian, dan circuit breaker. Kontrak API dan kebijakan lengkap ada di `docs/whatsapp-api.md`.
+
+### Kenapa bukan job (menyimpang dari Fase 5)
+
+Email tetap lewat `SendTicketNotification` + queue seperti Fase 5. WhatsApp **tidak** — `RegistrationController::queueNotifications()` dan `App\Actions\ResendTicketNotifications` hanya mencatat baris `notification_logs` kanal `whatsapp` (`pending` jika `registrations.wa_consent = true`, `skipped` jika tidak) tanpa pernah men-dispatch job. Alasannya: queue Laravel tidak punya tempat alami untuk memaksakan "satu pesan per menit dengan jeda acak lintas SEMUA registrasi" — setiap job berjalan independen. Sebagai gantinya, command `wa:send-next` mengambil **satu** baris pending tertua setiap kali dijalankan, dan jeda terjadi secara alami karena command ini dijadwalkan `everyMinute()` tapi menolak mengirim sebelum `next_allowed_at`.
+
+### Alur `wa:send-next`
+
+```
+cron tiap menit → schedule:run → wa:send-next
+  1. keluar jika: TICKET_WA_DRIVER != waha, sedang pause, di luar jam kirim,
+     batas harian tercapai, atau now() < next_allowed_at
+  2. baris 'sending' yang menggantung > 10 menit dikembalikan ke 'pending'
+  3. GET /api/sessions — sesi harus WORKING, kalau tidak: pause + keluar
+  4. DB::transaction + lockForUpdate: klaim SATU baris pending tertua
+     (channel=whatsapp, wa_consent=true, registrasi belum dibatalkan),
+     tandai 'sending', commit
+  5. kirim lewat TicketNotifier::sendWhatsApp() DI LUAR transaksi
+       ├─ sukses → 'sent' + sent_at + provider_message_id,
+       │           next_allowed_at = now() + acak(45..90 detik), consecutive_failures = 0
+       └─ gagal  → attempts++, last_error (tersaring), lalu:
+                     attempts >= 3  → 'failed'
+                     attempts < 3   → kembali ke 'pending' (dicoba run berikutnya)
+                   klasifikasi kegagalan (WahaFailureClassifier) menentukan breaker:
+                     IMMEDIATE (koneksi/timeout, body memuat "463") → pause langsung
+                     COUNTS (HTTP 5xx)   → consecutive_failures++, pause jika >= WA_MAX_CONSECUTIVE_FAILURES
+                     NONE (mis. nomor tidak valid) → consecutive_failures direset ke 0
+```
+
+State pacing/breaker (`next_allowed_at`, `paused_until`, `pause_reason`, `consecutive_failures`) disimpan di tabel `wa_throttle_states` (baris tunggal, `App\Models\WaThrottleState::current()`), **bukan** cache — cache bisa dihapus kapan saja oleh `cache:clear` dan akan membuang state pacing yang sedang berjalan.
+
+Dua kelas pendukung di `app/Services/Notifications/`:
+
+- `WahaClient`: transport HTTP murni (`sessions()`, `startTyping()`, `sendText()`, `stopTyping()`), tanpa logika kebijakan. API key tidak pernah masuk log/exception.
+- `WahaFailureClassifier`: mengklasifikasi kegagalan `sendText()` (lewat `App\Exceptions\WahaSendFailedException` yang membawa `Response` asli) menjadi `IMMEDIATE` / `COUNTS` / `NONE`. Tes sendiri di `tests/Unit/WahaFailureClassifierTest.php` — kelas ini yang disesuaikan lebih dulu kalau klasifikasinya ternyata salah setelah ada kegagalan nyata.
+
+`App\Services\Notifications\NotificationLogRecorder` dipakai ulang oleh `SendTicketNotification` (email) dan `wa:send-next` (whatsapp) untuk "tandai sent" dan "attempts++ + last_error", supaya logikanya tidak diduplikasi.
+
+### Command
+
+| Command | Fungsi |
+|---|---|
+| `wa:send-next` | Dijadwalkan `everyMinute()->withoutOverlapping()` di `routes/console.php`. Kirim (paling banyak) satu pesan, lalu keluar. |
+| `wa:status` | Ringkasan: terkirim hari ini vs `WA_DAILY_CAP`, jumlah pending/sending/failed/skipped, status pause, `next_allowed_at`, `consecutive_failures`. |
+| `wa:pause {hours=6} {--reason=}` | Jeda paksa (mis. sebelum maintenance VPS). |
+| `wa:resume` | Lepas pause dan reset `consecutive_failures` ke 0. |
+
+### Menaikkan `WA_DAILY_CAP` bertahap
+
+Nomor WhatsApp baru/tidak resmi lebih mudah dibatasi WhatsApp kalau langsung mengirim dalam volume besar. Disarankan menaikkan `WA_DAILY_CAP` bertahap selama beberapa hari pertama produksi (mis. 20 → 50 → 100) sambil memantau `wa:status` dan `notification_logs` kanal `whatsapp` berstatus `failed`. Turunkan lagi atau `wa:pause` kalau mulai banyak kegagalan `IMMEDIATE`/`COUNTS`.
+
+### Persetujuan (`wa_consent`)
+
+Checkbox di form pendaftaran ("Kirimi saya tiket dan informasi acara lewat WhatsApp"), **tidak tercentang secara default**, hanya tampil kalau `TicketNotifier::deliversWhatsApp()` bernilai `true` (yaitu `TICKET_WA_DRIVER=waha`). Disimpan di `registrations.wa_consent` (boolean, default `false`). Pendaftar yang tidak mencentang: baris `notification_logs` whatsapp langsung `skipped`, tidak pernah diambil `wa:send-next`.
 
 ## Menambah implementasi baru
 
@@ -97,8 +155,9 @@ Untuk WhatsApp: cukup ganti delegasi `sendWhatsApp()` di `MailTicketNotifier` (a
 ### Yang tidak boleh diubah
 
 - Constructor `SendTicketNotification(int $registrationId, string $channel)` — `RegistrationController` dan tes yang ada bergantung padanya.
-- `RegistrationController`, `RegisterAttendee`, dan tes yang sudah ada. Implementasi baru hanya menambah kelas + arm binding + tesnya sendiri.
+- `RegisterAttendee` dan alur kuota. Implementasi baru hanya menambah kelas + arm binding + tesnya sendiri.
 - Jangan memindahkan pengiriman ke dalam request atau ke dalam transaksi.
+- `RegistrationController::queueNotifications()` sudah sengaja diubah Fase 10 (kanal whatsapp tidak lagi dispatch job) — lihat "Outbox WhatsApp" di atas. Jangan mengembalikannya ke dispatch job tanpa membaca alasannya dulu.
 
 ## Perilaku retry
 
@@ -154,7 +213,7 @@ $this->app->instance(TicketNotifier::class, $fake);
 Tes untuk implementasi asli berdiri sendiri dan tidak menyentuh job:
 
 - SMTP: `Mail::fake()`, assert Mailable terkirim ke `$registration->email` dengan kode dan link tiket yang benar. Sudah ada di `tests/Feature/MailTicketNotifierTest.php` (termasuk tanggal/lokasi null, WA tetap log, dan penyaringan `last_error`).
-- WhatsApp: `Http::fake()`, assert request ke endpoint VPS sesuai `docs/whatsapp-api.md`, dan assert **exception dilempar** saat respons 4xx/5xx atau timeout (ini bagian kontrak yang paling mudah terlewat).
+- WhatsApp: `Http::fake()` + `Sleep::fake()` (supaya simulasi mengetik tidak benar-benar menunggu), assert urutan `startTyping`/`sendText`/`stopTyping` dan **exception dilempar** saat respons bukan 201 atau timeout. Sudah ada di `tests/Feature/Notifications/WahaClientTest.php` dan `tests/Feature/Notifications/WaSendNextCommandTest.php` (pacing, jam kirim, batas harian, circuit breaker).
 
 ## Memeriksa di produksi
 
@@ -168,3 +227,5 @@ WHERE n.status = 'failed' ORDER BY n.updated_at DESC;
 Antrean menumpuk (`SELECT COUNT(*) FROM jobs`) biasanya berarti cron tidak jalan atau worker mati sebelum selesai. Job yang menyerah tercatat juga di tabel `failed_jobs` (`php artisan queue:failed`, ulangi dengan `php artisan queue:retry`).
 
 Sebelum go-live, pastikan `TICKET_NOTIFIER=mail` di `.env` produksi, bukan `log` (masuk checklist H-1 di `docs/deploy.md`). Periksa juga SPF/DKIM/DMARC domain pengirim dan batas kirim harian mailbox (`docs/deploy.md`, "Email pengirim").
+
+WhatsApp: `php artisan wa:status` lewat SSH untuk ringkasan cepat. `TICKET_WA_DRIVER=waha` hanya diaktifkan setelah uji manual di VPS (`docs/deploy.md`).

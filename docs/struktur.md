@@ -166,15 +166,81 @@ Catatan penting:
   **`resources/views/mail/`** (`ticket.blade.php` HTML ber-CSS inline, `ticket-text.blade.php`
   teks polos). Warna email memakai token `docs/design/DESIGN.md` secara inline, karena
   klien email tidak memuat `public/css/app.css`.
-- **Sanitasi `last_error`** di `SendTicketNotification::errorMessage()` (satu-satunya
-  perubahan di job, menjawab "Catatan untuk Fase 10" di bawah): kelas exception + pesan
-  yang sudah disaring dari kredensial, email, nomor telepon, dan token; maksimal
-  **500** karakter (sebelumnya 1000). Ditaruh di job, bukan helper `Support/` baru,
-  karena hanya dipakai di situ.
+- **Sanitasi `last_error`**, awalnya method private `SendTicketNotification::errorMessage()`:
+  kelas exception + pesan yang sudah disaring dari kredensial, email, nomor telepon, dan
+  token; maksimal **500** karakter (sebelumnya 1000). *(Diekstrak ke
+  `App\Support\NotificationErrorSanitizer::sanitize()` pada Fase 10 bagian WhatsApp di
+  bawah, supaya bisa dipakai ulang `wa:send-next` — lihat di sana.)*
 - **`config/mail.php`**: `smtp.timeout` = `env('MAIL_TIMEOUT', 10)`. `.env.example`
   menambah `MAIL_TIMEOUT` dan catatan `MAIL_SCHEME` (Laravel versi ini tidak memakai
   `MAIL_ENCRYPTION`).
 - **`tests/Feature/MailTicketNotifierTest.php`** (baru). Tes lama tidak diubah.
+
+### Penyimpangan disetujui pada Fase 10 (bagian WhatsApp)
+
+- **`app/Console/Commands/`** (folder baru, tidak ada di struktur awal): berisi
+  `WaSendNext.php`, `WaStatus.php`, `WaPause.php`, `WaResume.php`. Laravel 11+ memuat
+  command di folder ini secara otomatis tanpa konfigurasi tambahan (selain
+  `routes/console.php` untuk closure command dan schedule). Dibutuhkan karena WhatsApp
+  tidak lagi dikirim lewat job/queue (lihat poin berikutnya) — `wa:send-next` perlu jadi
+  command Artisan sendiri supaya bisa dijadwalkan `everyMinute()` terpisah dari
+  `queue:work`.
+- **Outbox WhatsApp menyimpang dari Fase 5 secara sengaja**: `RegistrationController::queueNotifications()`
+  dan `App\Actions\ResendTicketNotifications` tidak lagi men-dispatch `SendTicketNotification`
+  untuk channel `whatsapp` — hanya mencatat `notification_logs` (`pending` jika
+  `wa_consent`, `skipped` jika tidak). Job `SendTicketNotification` tidak diubah strukturnya
+  (masih mendukung channel `whatsapp` di kodenya, hanya tidak pernah dipanggil untuk kanal
+  itu lagi) supaya kontraknya tetap seperti didokumentasikan Fase 5. Alasan lengkap di
+  `docs/notifikasi.md` "Outbox WhatsApp".
+- **`registrations.wa_consent`** (kolom baru, migrasi `..._000009_add_wa_consent_to_registrations_table.php`):
+  tidak ada di `docs/erd.md`/`docs/design/DESIGN.md` sebelum Fase 10 — ditambahkan atas
+  instruksi eksplisit pemilik proyek (checkbox form, teks persis "Kirimi saya tiket dan
+  informasi acara lewat WhatsApp", tidak tercentang default). `docs/erd.md` dan
+  `docs/design/DESIGN.md` sudah diperbarui mengikuti keputusan ini. Checkbox hanya
+  dirender di `form.blade.php` kalau `$whatsappActive` true.
+- **`notification_logs.status` menambah `sending` dan `skipped`** (migrasi
+  `..._000010_add_sending_skipped_to_notification_logs_status.php`), diubah lewat
+  `->change()` tanpa `doctrine/dbal` (Laravel 13 sudah native, sama seperti perubahan
+  `email_canonical` di Fase 8). `sending` = klaim atomik `wa:send-next` sebelum memanggil
+  WAHA (dilepas balik ke `pending` kalau menggantung > 10 menit); `skipped` = `wa_consent = false`.
+- **`wa_throttle_states`** (tabel baru, migrasi `..._000011_create_wa_throttle_states_table.php`,
+  model `App\Models\WaThrottleState`): baris tunggal (`id = 1`) penyimpan
+  `next_allowed_at`/`paused_until`/`pause_reason`/`consecutive_failures`. Disimpan di DB
+  (bukan tabel pengaturan generik — proyek ini belum punya satu pun) karena cache bisa
+  dihapus kapan saja oleh `cache:clear` dan akan membuang pacing/circuit-breaker yang
+  sedang berjalan.
+- **`app/Services/Notifications/WahaClient.php`**: transport HTTP murni ke WAHA
+  (`sessions`, `startTyping`, `sendText`, `stopTyping`), tanpa logika kebijakan.
+- **`app/Services/Notifications/WahaFailureClassifier.php`**: mengklasifikasi kegagalan
+  `sendText()` jadi `IMMEDIATE`/`COUNTS`/`NONE` untuk circuit breaker `wa:send-next`
+  (docs/whatsapp-api.md "BELUM DIVERIFIKASI" — kelas ini yang disesuaikan lebih dulu
+  kalau klasifikasinya ternyata salah setelah ada kegagalan nyata).
+- **`app/Services/Notifications/NotificationLogRecorder.php`**: ekstrak logika "tandai
+  sent" dan "attempts++ + last_error" dari `SendTicketNotification`, dipakai ulang oleh
+  job (email) dan `wa:send-next` (whatsapp) supaya tidak diduplikasi.
+- **`app/Support/NotificationErrorSanitizer.php`**: ekstrak `SendTicketNotification::errorMessage()`
+  jadi static helper, dipakai `NotificationLogRecorder` dan `SendTicketNotification::failed()`.
+- **`app/Exceptions/WahaSendFailedException.php`**: dilempar `MailTicketNotifier::sendWhatsApp()`
+  saat WAHA membalas selain HTTP 201; membawa `Illuminate\Http\Client\Response` asli supaya
+  `WahaFailureClassifier` bisa membaca status/body-nya.
+- **`MailTicketNotifier::sendWhatsApp()`**: `TICKET_WA_DRIVER=waha` → kirim sungguhan
+  (startTyping → simulasi mengetik pakai `Illuminate\Support\Sleep` supaya bisa
+  `Sleep::fake()` di tes → sendText → stopTyping, kegagalan stopTyping diabaikan), selain
+  itu (default `log`) tetap diteruskan ke `LogTicketNotifier` seperti sebelumnya.
+  `deliversWhatsApp()` sekarang `true` kalau driver `waha`.
+- **`config/services.php`**: blok `ticket_wa_driver`, `waha` (`url`/`api_key`/`session`),
+  dan `wa` (`min_gap_seconds`, `max_gap_seconds`, `typing_max_seconds`, `daily_cap`,
+  `send_from`, `send_until`, `pause_hours`, `max_consecutive_failures`). `.env.example`
+  menambah kunci yang sepadan, tanpa nilai rahasia.
+- **`routes/console.php`** menambah `Schedule::command('wa:send-next')->everyMinute()->withoutOverlapping()`
+  — kunci default 24 jam dipakai apa adanya (bukan 5 menit seperti `queue:work`) karena
+  satu eksekusi `wa:send-next` selesai dalam hitungan detik, bukan sampai 50 detik.
+- **Tes baru**: `tests/Feature/Notifications/WahaClientTest.php`,
+  `tests/Feature/Notifications/WaSendNextCommandTest.php`,
+  `tests/Unit/WahaFailureClassifierTest.php`. Tes yang sudah ada disesuaikan ke jumlah
+  job yang dipush (hanya kanal email) tanpa mengubah perilaku yang diuji:
+  `tests/Feature/RegistrationTest.php`, `tests/Feature/TicketPageTest.php`,
+  `tests/Feature/Admin/RegistrationAdminTest.php`, `tests/Feature/Admin/DashboardTest.php`.
 
 ### Penyimpangan disetujui: perbaikan form pra-pembukaan
 

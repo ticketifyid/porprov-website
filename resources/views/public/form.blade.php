@@ -133,6 +133,15 @@
                                  value="{{ old('phone') }}"
                                  :helper="'Boleh diawali 08 atau 62.'.($whatsappActive ? ' E-ticket dikirim ke nomor ini.' : '')" />
 
+                        @if ($whatsappActive)
+                            <div class="field field--checkbox">
+                                <label class="field__checkbox-label">
+                                    <input type="checkbox" name="wa_consent" value="1" @checked(old('wa_consent'))>
+                                    Kirimi saya tiket dan informasi acara lewat WhatsApp
+                                </label>
+                            </div>
+                        @endif
+
                         <div>
                             <x-stepper name="ticket_qty" :max="$maxQty" :value="(int) old('ticket_qty', 1)"
                                        :has-error="$isQuotaError" />

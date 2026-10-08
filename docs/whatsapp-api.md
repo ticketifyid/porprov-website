@@ -1,59 +1,66 @@
-# Kontrak API WhatsApp (VPS)
+# Kontrak API WhatsApp (WAHA, VPS)
 
-> DITUNDA. Tidak dipakai sampai Fase 10. Selama Fase 0–9, notifikasi memakai `LogTicketNotifier`.
+Diuji manual 8 Oktober 2026. Ini kontrak final — jangan dikarang ulang; bagian yang ditandai "BELUM DIVERIFIKASI" memang belum pernah diuji dengan kegagalan nyata dan boleh disesuaikan nanti.
 
-> Isi bagian [ISI] sesuai API di VPS kamu. Kalau bentuk API-mu berbeda dari usulan di bawah, ganti seluruh contoh dengan yang sebenarnya. Claude Code hanya boleh mengikuti yang tertulis di sini.
+## Server
+
+- **WAHA** (WhatsApp HTTP API, versi gratis, engine **NOWEB**), **1 sesi**, berjalan di VPS pemilik proyek.
+- Base URL: env `WAHA_URL` (produksi: `https://wa.dwiprakoso.my.id`).
+- Autentikasi: header `X-Api-Key: <WAHA_API_KEY>`.
+- Nama sesi: env `WAHA_SESSION`, nilainya **`dwilaptop`** (BUKAN `"default"`).
+- Timeout 10 detik per panggilan (`App\Services\Notifications\WahaClient`).
+
+## chatId
+
+Nomor internasional tanpa `+` dan tanpa `0` di depan, diikuti `@c.us`. Contoh: `6281234567890@c.us`. Diambil dari `App\Support\PhoneNormalizer::normalize()` (nomor di `registrations.phone` sudah dalam bentuk ini, tinggal ditambah `@c.us`).
 
 ## Endpoint
 
-| Item | Nilai |
-|---|---|
-| Base URL | [ISI] (simpan di `.env` sebagai `WA_API_URL`) |
-| Autentikasi | [ISI, mis. header `Authorization: Bearer <WA_API_TOKEN>`] |
-| Timeout yang wajar dari Laravel | 10 detik |
+Semua `POST` berbody JSON dan **sukses dengan HTTP 201**.
 
-## Kirim pesan
+| Method | Path | Body | Keterangan |
+|---|---|---|---|
+| GET | `/api/sessions` | — | Mengembalikan array sesi. Cek kesehatan: entri dengan `name == WAHA_SESSION` harus berstatus `"WORKING"`. Jika bukan, jangan kirim apa pun. |
+| POST | `/api/startTyping` | `{session, chatId}` | |
+| POST | `/api/sendText` | `{session, chatId, text}` | |
+| POST | `/api/stopTyping` | `{session, chatId}` | Kegagalan di sini tidak membatalkan pengiriman (pesan sudah terkirim lewat `sendText`). |
 
-`POST [ISI path, mis. /send]`
+## BELUM DIVERIFIKASI
 
-Request (usulan, sesuaikan):
-```json
-{
-  "to": "6281234567890",
-  "message": "teks pesan",
-  "ref": "PJT26-7K3M9Q"
-}
-```
+Bagian ini sengaja tidak dikarang detail — akan disesuaikan setelah ada kegagalan nyata (lihat `App\Services\Notifications\WahaFailureClassifier`):
 
-Respons sukses (usulan, sesuaikan):
-```json
-{ "ok": true, "id": "<id pesan di VPS>" }
-```
+- **Bentuk body respons `sendText` yang sukses.** Id pesan diambil defensif: string `id`, atau `id._serialized`, atau `key.id`; jika tidak ada satupun, `provider_message_id` disimpan `null`.
+- **Endpoint cek nomor terdaftar** (belum dipakai).
+- **Bentuk error saat akun WhatsApp dibatasi** (kode umum: `463`). Yang diketahui: body responsnya memuat teks `"463"`. Status HTTP persisnya belum pasti.
 
-Respons gagal (usulan, sesuaikan):
-```json
-{ "ok": false, "error": "alasan" }
-```
+Pesan error mentah (sudah disaring dari kredensial/PII oleh `App\Support\NotificationErrorSanitizer`, maks 500 karakter) disimpan ke `notification_logs.last_error` supaya klasifikasi ini bisa diperbaiki begitu ada kegagalan sungguhan.
 
-## Perilaku yang diharapkan
+## Kebijakan pengiriman
 
-- VPS yang mengatur antrean dan jeda antar pesan (anti-banned). Laravel cukup mengirim satu request per pesan dan menganggap "diterima VPS" = `sent`.
-- `id` dari VPS disimpan di `notification_logs.provider_message_id`.
-- HTTP non-2xx atau `ok: false` = gagal → retry oleh job Laravel (maks 3 percobaan).
-- [ISI: apakah VPS punya webhook status terkirim/dibaca? Jika tidak, abaikan.]
+Nomor WhatsApp pengirim **tidak resmi** dan bisa dibanned. Kebijakan ini ditegakkan oleh kode (`App\Console\Commands\WaSendNext`), bukan sekadar catatan:
+
+- **Satu pesan per eksekusi command**, tidak pernah paralel, tidak pernah di dalam request/transaksi.
+- **Jeda acak** antar pesan: `WA_MIN_GAP_SECONDS` (45) sampai `WA_MAX_GAP_SECONDS` (90) detik, disimpan sebagai `next_allowed_at` di tabel `wa_throttle_states`.
+- **Simulasi mengetik**: `startTyping` → tunggu sebanding panjang pesan (minimal 2 detik, maksimal `WA_TYPING_MAX_SECONDS` = 8, plus sedikit acak) → `sendText` → `stopTyping`.
+- **Batas harian** `WA_DAILY_CAP` (100), dihitung dari `notification_logs` kanal `whatsapp` berstatus `sent` hari ini (timezone aplikasi).
+- **Jam kirim** `WA_SEND_FROM` (08:00) sampai `WA_SEND_UNTIL` (20:00), timezone aplikasi.
+- **Hanya untuk pendaftar yang menyetujui** (`registrations.wa_consent = true`).
+- **Circuit breaker**: pause `WA_PAUSE_HOURS` (6 jam) jika sesi bukan `WORKING`, koneksi/timeout gagal, HTTP 5xx **tiga kali berturut-turut** (`WA_MAX_CONSECUTIVE_FAILURES` = 3), atau body respons memuat `"463"`. Kegagalan lain (mis. nomor tidak valid) hanya menaikkan `attempts` baris itu, tidak memicu breaker, dan mereset hitungan beruntun. Lihat `docs/notifikasi.md` "Outbox WhatsApp" untuk alur lengkapnya.
 
 ## Template pesan
 
 ```
 Halo {nama},
-
 Pendaftaran Opening Ceremony Porprov Jateng XVII 2026 berhasil.
 
 Kode registrasi: {kode}
 Jumlah tiket: {qty} (tukar dengan {qty} gelang)
 Acara: {tanggal & jam}, {lokasi}
 
-E-ticket & QR: {link /tiket/{token}}
+E-ticket dan QR: {link /tiket/{token} dari APP_URL}
 
 Tunjukkan QR saat registrasi ulang.
+Pesan ini dikirim otomatis karena Anda mendaftar dan menyetujui notifikasi WhatsApp.
 ```
+
+Baris "Acara" disembunyikan jika tanggal maupun lokasi acara masih kosong (sama seperti email).

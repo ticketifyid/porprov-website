@@ -19,13 +19,6 @@ use Illuminate\Http\Response;
 class RegistrationController extends Controller
 {
     /**
-     * Kanal notifikasi yang dicatat dan diantre setelah pendaftaran berhasil.
-     *
-     * @var list<string>
-     */
-    private const CHANNELS = ['email', 'whatsapp'];
-
-    /**
      * Kode error MySQL yang berarti server sedang sibuk, bukan data salah:
      * 1205 lock wait timeout, 1213 deadlock.
      *
@@ -48,6 +41,7 @@ class RegistrationController extends Controller
                 'email' => $data['email'],
                 'email_canonical' => $data['email_canonical'],
                 'phone' => $request->normalizedPhone(),
+                'wa_consent' => (bool) $data['wa_consent'],
                 'ticket_qty' => (int) $data['ticket_qty'],
                 'verified_via' => $request->verifiedVia(),
             ], $request->ip());
@@ -113,20 +107,29 @@ class RegistrationController extends Controller
     }
 
     /**
-     * Dijalankan SETELAH transaksi commit (aturan 8 CLAUDE.md): catat dua baris
-     * notification_logs berstatus pending, lalu antre job-nya.
+     * Dijalankan SETELAH transaksi commit (aturan 8 CLAUDE.md).
+     *
+     * Kanal email: catat notification_logs 'pending', lalu antre job seperti
+     * sebelumnya. Kanal whatsapp TIDAK lagi dispatch job (docs/notifikasi.md
+     * "Outbox WhatsApp" — sengaja menyimpang dari Fase 5): baris dicatat
+     * 'pending' jika peserta menyetujui WA, atau 'skipped' jika tidak,
+     * lalu diambil belakangan oleh command `wa:send-next`.
      */
     private function queueNotifications(Registration $registration): void
     {
-        foreach (self::CHANNELS as $channel) {
-            NotificationLog::create([
-                'registration_id' => $registration->getKey(),
-                'channel' => $channel,
-                'status' => 'pending',
-                'attempts' => 0,
-            ]);
+        NotificationLog::create([
+            'registration_id' => $registration->getKey(),
+            'channel' => 'email',
+            'status' => 'pending',
+            'attempts' => 0,
+        ]);
+        SendTicketNotification::dispatch($registration->getKey(), 'email');
 
-            SendTicketNotification::dispatch($registration->getKey(), $channel);
-        }
+        NotificationLog::create([
+            'registration_id' => $registration->getKey(),
+            'channel' => 'whatsapp',
+            'status' => $registration->wa_consent ? 'pending' : 'skipped',
+            'attempts' => 0,
+        ]);
     }
 }

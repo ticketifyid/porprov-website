@@ -115,6 +115,11 @@ Tulis sebagai CSS custom properties di `:root` dalam `public/css/app.css`.
 
 - Input biasa, placeholder `08xxxxxxxxxx`. Helper: "Boleh diawali 08 atau 62. E-ticket dikirim ke nomor ini. …". Normalisasi ke `62` di server, bukan di browser.
 
+## Field persetujuan WhatsApp (ditambahkan Fase 10)
+
+- Checkbox native, langsung di bawah field "Nomor WhatsApp", **tidak tercentang secara default**. Label persis: "Kirimi saya tiket dan informasi acara lewat WhatsApp". Tidak ada di artboard asli (field baru, disetujui eksplisit pemilik proyek) — stylingnya minimal, mengikuti ukuran teks dan warna token yang sudah ada (`--ink`, label 14px), bukan nilai desain baru.
+- Hanya dirender kalau WhatsApp benar-benar aktif (`$whatsappActive`, lihat "Field nomor WhatsApp" di atas) — tidak ada gunanya meminta persetujuan WA kalau pengirimannya masih `LogTicketNotifier`.
+
 ## Aturan stepper (wajib sama dengan desain)
 
 - Nilai awal 1 (atau `old('ticket_qty')`, dibatasi `maxQty`). Batas bawah 1, batas atas `maxQty` dari server (maks. 4).

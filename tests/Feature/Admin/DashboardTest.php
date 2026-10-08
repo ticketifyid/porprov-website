@@ -144,7 +144,8 @@ class DashboardTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionHas('status');
 
-        Queue::assertPushed(SendTicketNotification::class, 2);
+        // Kanal whatsapp tidak lagi dispatch job (docs/notifikasi.md "Outbox WhatsApp").
+        Queue::assertPushed(SendTicketNotification::class, 1);
 
         $this->assertSame(
             'pending',

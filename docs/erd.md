@@ -55,6 +55,7 @@ Seeder: 35 kabupaten/kota Jawa Tengah + "Luar Jawa Tengah" (sort_order terbesar)
 | email | `string('email', 191)` | lowercase, persis seperti diketik peserta; dipakai untuk kirim e-ticket |
 | email_canonical | `string('email_canonical', 191)->nullable()` | Bentuk kanonik untuk cek duplikat, lihat `docs/arsitektur.md`. Dikosongkan (`NULL`) saat registrasi dibatalkan (Fase 8), supaya email yang sama bisa dipakai mendaftar ulang — unique index mengizinkan banyak `NULL` |
 | phone | `string('phone', 20)` | `62xxx` |
+| wa_consent | `boolean('wa_consent')->default(false)` | Ditambahkan Fase 10 (`..._000009_add_wa_consent_to_registrations_table.php`): persetujuan checkbox form ("Kirimi saya tiket dan informasi acara lewat WhatsApp"), tidak tercentang default. Baris `notification_logs` whatsapp `skipped` kalau `false` |
 | ticket_qty | `unsignedTinyInteger('ticket_qty')` | 1–4 |
 | redeemed_at | `dateTime('redeemed_at')->nullable()->index()` | |
 | redeemed_by | `foreignId('redeemed_by')->nullable()->constrained('users')->nullOnDelete()` | |
@@ -73,7 +74,7 @@ Index: `unique(['event_id','email_canonical'])` (mengizinkan banyak `NULL`), ind
 | id | `id()` | |
 | registration_id | `foreignId(...)->constrained()->cascadeOnDelete()` | |
 | channel | `enum('channel', ['email','whatsapp'])` | |
-| status | `enum('status', ['pending','sent','failed'])->default('pending')->index()` | |
+| status | `enum('status', ['pending','sending','sent','failed','skipped'])->default('pending')->index()` | `sending` dan `skipped` ditambahkan Fase 10 (`..._000010_add_sending_skipped_to_notification_logs_status.php`) untuk outbox WhatsApp (`docs/notifikasi.md`): `sending` = klaim atomik `wa:send-next` (dikembalikan ke `pending` kalau menggantung > 10 menit), `skipped` = `wa_consent = false`, tidak pernah dikirim. Kolom diubah lewat `->change()` tanpa `doctrine/dbal` (Laravel 13 native) |
 | attempts | `unsignedTinyInteger('attempts')->default(0)` | |
 | last_error | `text('last_error')->nullable()` | |
 | provider_message_id | `string(...)->nullable()` | |
@@ -81,6 +82,19 @@ Index: `unique(['event_id','email_canonical'])` (mengizinkan banyak `NULL`), ind
 | timestamps | `timestamps()` | |
 
 Index: `unique(['registration_id','channel'])`.
+
+## wa_throttle_states
+
+Baris tunggal (`id = 1`), ditambahkan Fase 10 (`..._000011_create_wa_throttle_states_table.php`): state pacing/circuit-breaker `wa:send-next` (`docs/notifikasi.md` "Outbox WhatsApp"). Disimpan di DB, bukan cache, supaya tidak hilang kalau `cache:clear` dijalankan.
+
+| Kolom | Migration | Keterangan |
+|---|---|---|
+| id | `id()` | Selalu 1, lihat `App\Models\WaThrottleState::current()` |
+| next_allowed_at | `dateTime('next_allowed_at')->nullable()` | Jeda acak 45–90 detik setelah sukses kirim |
+| paused_until | `dateTime('paused_until')->nullable()` | Diisi saat circuit breaker terpicu atau `wa:pause` manual |
+| pause_reason | `string('pause_reason')->nullable()` | |
+| consecutive_failures | `unsignedTinyInteger('consecutive_failures')->default(0)` | Hitungan HTTP 5xx berturut-turut; direset ke 0 oleh kegagalan non-breaker |
+| timestamps | `timestamps()` | |
 
 ## users
 

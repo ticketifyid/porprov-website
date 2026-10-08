@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Actions\CancelRegistration;
 use App\Actions\RegisterAttendee;
+use App\Contracts\TicketNotifier;
 use App\Jobs\SendTicketNotification;
 use App\Models\Event;
 use App\Models\Regency;
 use App\Models\Registration;
+use App\Models\User;
 use App\Services\ImageCaptcha;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -654,16 +657,66 @@ class RegistrationTest extends TestCase
 
         $logs = $registration->notificationLogs()->orderBy('channel')->get();
         $this->assertSame(['email', 'whatsapp'], $logs->pluck('channel')->all());
-        $this->assertSame(['pending', 'pending'], $logs->pluck('status')->all());
+        // Tanpa wa_consent, baris whatsapp dicatat 'skipped' (docs/notifikasi.md
+        // "Outbox WhatsApp") dan tidak pernah dispatch job.
+        $this->assertSame(['pending', 'skipped'], $logs->pluck('status')->all());
 
-        Queue::assertPushed(SendTicketNotification::class, 2);
-        foreach (['email', 'whatsapp'] as $channel) {
-            Queue::assertPushed(
-                SendTicketNotification::class,
-                fn (SendTicketNotification $job) => $job->registrationId === $registration->id
-                    && $job->channel === $channel,
-            );
-        }
+        Queue::assertPushed(SendTicketNotification::class, 1);
+        Queue::assertPushed(
+            SendTicketNotification::class,
+            fn (SendTicketNotification $job) => $job->registrationId === $registration->id
+                && $job->channel === 'email',
+        );
+    }
+
+    public function test_pendaftaran_dengan_wa_consent_mencatat_whatsapp_pending_tanpa_dispatch_job(): void
+    {
+        Queue::fake();
+
+        $this->post('/daftar', $this->payload(['ticket_qty' => 1, 'wa_consent' => '1']));
+
+        $registration = Registration::firstOrFail();
+
+        $this->assertTrue($registration->wa_consent);
+
+        $waLog = $registration->notificationLogs()->where('channel', 'whatsapp')->firstOrFail();
+        $this->assertSame('pending', $waLog->status);
+
+        // wa:send-next yang mengambil baris ini belakangan, bukan job.
+        Queue::assertPushed(SendTicketNotification::class, 1);
+        Queue::assertPushed(
+            SendTicketNotification::class,
+            fn (SendTicketNotification $job) => $job->channel === 'email',
+        );
+    }
+
+    public function test_checkbox_wa_consent_tidak_tercentang_default_termasuk_setelah_gagal_validasi(): void
+    {
+        config(['services.ticket_notifier' => 'mail', 'services.ticket_wa_driver' => 'waha']);
+        $this->app->forgetInstance(TicketNotifier::class);
+
+        // Form belum pernah di-submit: checkbox tidak tercentang.
+        $this->assertWaConsentCheckboxUnchecked($this->get('/daftar')->assertOk()->getContent());
+
+        // ticket_qty di luar 1-4 membuat validasi gagal; wa_consent sengaja
+        // TIDAK dikirim (checkbox tidak dicentang), sama seperti browser yang
+        // tidak mengirim checkbox kosong sama sekali.
+        $this->post('/daftar', $this->payload(['ticket_qty' => 9]))
+            ->assertSessionHasErrors('ticket_qty');
+
+        // old('wa_consent') harus tetap falsy, bukan ikut tercentang.
+        $this->assertWaConsentCheckboxUnchecked($this->get('/daftar')->assertOk()->getContent());
+    }
+
+    private function assertWaConsentCheckboxUnchecked(string $html): void
+    {
+        $this->assertMatchesRegularExpression(
+            '/<input type="checkbox" name="wa_consent" value="1"[^>]*>/',
+            $html,
+        );
+
+        preg_match('/<input type="checkbox" name="wa_consent" value="1"([^>]*)>/', $html, $matches);
+        $this->assertStringNotContainsString('checked', $matches[1] ?? '');
     }
 
     public function test_halaman_sukses_menampilkan_kode_dan_jumlah_tiket(): void
@@ -708,7 +761,7 @@ class RegistrationTest extends TestCase
         $this->post('/daftar', $this->payload())->assertRedirectContains('/daftar/sukses/');
 
         $pertama = Registration::firstOrFail();
-        app(\App\Actions\CancelRegistration::class)->handle($pertama, \App\Models\User::factory()->admin()->create());
+        app(CancelRegistration::class)->handle($pertama, User::factory()->admin()->create());
 
         $response = $this->post('/daftar', $this->payload(['name' => 'Budi Santoso Lagi']));
 

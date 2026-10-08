@@ -88,7 +88,10 @@ belum selesai kalau ada satu baris yang tidak sesuai:
 | `APP_TIMEZONE` | `Asia/Jakarta` | Jadwal acara, jam penukaran gelang, dan badge "Sudah ditukar" dibaca/ditulis dalam WIB (`docs/struktur.md` Fase 6). Salah zona = jam di tiket meleset 7 jam. |
 | `APP_KEY` | hasil `php artisan key:generate` | Kunci enkripsi sesi & cookie. Jangan pakai kunci yang sama dengan lokal. |
 | `SESSION_SECURE_COOKIE` | `true` | Cookie sesi petugas hanya dikirim lewat HTTPS. Tanpa ini, satu request `http://` yang lolos bisa membocorkan sesi admin di Wi-Fi venue. |
-| `TICKET_NOTIFIER` | **`mail`** | Email e-ticket asli (WhatsApp masih log sampai diimplementasikan). `log` hanya menulis ke `storage/logs` dan tidak mengirim apa pun: peserta tidak akan menerima e-ticket. Lihat `docs/notifikasi.md`. |
+| `TICKET_NOTIFIER` | **`mail`** | Email e-ticket asli. `log` hanya menulis ke `storage/logs` dan tidak mengirim apa pun: peserta tidak akan menerima e-ticket. Lihat `docs/notifikasi.md`. |
+| `TICKET_WA_DRIVER` | `log` dulu, baru `waha` setelah uji manual | **Jangan langsung `waha` saat deploy pertama.** Aktifkan hanya setelah sesi WAHA di VPS dicek `WORKING` lewat `wa:status` dan uji kirim ke nomor sendiri berhasil. Lihat `docs/whatsapp-api.md`. |
+| `WAHA_URL` / `WAHA_API_KEY` / `WAHA_SESSION` | dari VPS WAHA | Secret key hanya di `.env`. `WAHA_SESSION` harus sama persis dengan nama sesi di WAHA (bukan `"default"`). |
+| `WA_MIN_GAP_SECONDS` … `WA_MAX_CONSECUTIVE_FAILURES` | nilai default `.env.example` cukup untuk mulai | Lihat `docs/notifikasi.md` "Menaikkan WA_DAILY_CAP bertahap" — mulai dari batas harian kecil. |
 | `DB_*` | kredensial produksi | — |
 | `QUEUE_CONNECTION` | `database` | Notifikasi dikirim lewat antrean, dijalankan cron (langkah 7). |
 | `SESSION_DRIVER` | `database` | Shared hosting bisa membersihkan `storage/framework/sessions` kapan saja. |
@@ -410,6 +413,8 @@ Dikerjakan sehari sebelum acara, bersama panitia.
 - [ ] SPF, DKIM, DMARC domain pengirim lolos (langkah 4, "Email pengirim").
 - [ ] Batas kirim harian/per jam mailbox sudah dicek dan cukup untuk sisa pendaftar +
       kirim ulang.
+- [ ] Kalau `TICKET_WA_DRIVER=waha`: `php artisan wa:status` menunjukkan sesi aktif
+      (tidak sedang pause) dan `WA_DAILY_CAP` cukup untuk sisa pendaftar hari H.
 - [ ] `APP_DEBUG=false`, `APP_ENV=production`, `SESSION_SECURE_COOKIE=true`.
 - [ ] `php artisan config:cache` sudah dijalankan setelah perubahan `.env` terakhir.
 - [ ] `notification_logs` tidak menumpuk status `pending` atau `failed`

@@ -22,7 +22,7 @@ class RegisterAttendee
     private const MAX_ATTEMPTS = 10;
 
     /**
-     * @param  array{name: string, regency_id: int, email: string, email_canonical: string, phone: string, ticket_qty: int, verified_via?: string|null}  $data
+     * @param  array{name: string, regency_id: int, email: string, email_canonical: string, phone: string, wa_consent?: bool, ticket_qty: int, verified_via?: string|null}  $data
      *
      * @throws QuotaException
      */
@@ -54,6 +54,7 @@ class RegisterAttendee
                 'email' => $data['email'],
                 'email_canonical' => $data['email_canonical'],
                 'phone' => $data['phone'],
+                'wa_consent' => $data['wa_consent'] ?? false,
                 'ticket_qty' => $qty,
                 'ip_address' => $ip,
             ]);

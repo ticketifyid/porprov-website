@@ -93,6 +93,8 @@ class StoreRegistrationRequest extends FormRequest
             // Hanya string bilangan bulat murni yang dijadikan int. "1.5" dibiarkan
             // apa adanya supaya ditolak rule integer, bukan dibulatkan diam-diam.
             'ticket_qty' => is_string($qty) && preg_match('/^\s*\d+\s*$/', $qty) ? (int) $qty : $qty,
+            // Checkbox tidak tercentang tidak ikut terkirim oleh HTML form.
+            'wa_consent' => $this->boolean('wa_consent'),
         ]);
     }
 
@@ -128,6 +130,7 @@ class StoreRegistrationRequest extends FormRequest
                 }
             }],
             'ticket_qty' => ['required', 'integer', 'between:1,4'],
+            'wa_consent' => ['required', 'boolean'],
         ];
     }
 

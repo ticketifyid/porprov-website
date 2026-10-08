@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Contracts\TicketNotifier;
 use App\Models\NotificationLog;
 use App\Models\Registration;
+use App\Services\Notifications\NotificationLogRecorder;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use InvalidArgumentException;
@@ -42,6 +43,8 @@ class SendTicketNotification implements ShouldQueue
 
     public function handle(TicketNotifier $notifier): void
     {
+        $recorder = app(NotificationLogRecorder::class);
+
         // Kanal divalidasi lebih dulu: nilai di luar enum notification_logs
         // adalah salah kode, bukan kegagalan pengiriman, dan tidak boleh
         // sempat membuat baris log.
@@ -74,22 +77,14 @@ class SendTicketNotification implements ShouldQueue
         try {
             $messageId = $send($registration);
         } catch (Throwable $e) {
-            $log->forceFill([
-                'attempts' => $log->attempts + 1,
-                'last_error' => $this->errorMessage($e),
-            ])->save();
-
             // Status tetap 'pending': queue yang menentukan kapan retry dan
             // kapan menyerah. Penanda 'failed' dipasang di failed() di bawah.
+            $recorder->recordAttemptFailure($log, $e);
+
             throw $e;
         }
 
-        $log->forceFill([
-            'status' => 'sent',
-            'sent_at' => now(),
-            'provider_message_id' => $messageId,
-            'last_error' => null,
-        ])->save();
+        $recorder->markSent($log, $messageId);
     }
 
     /**
@@ -97,52 +92,21 @@ class SendTicketNotification implements ShouldQueue
      */
     public function failed(?Throwable $e): void
     {
-        NotificationLog::query()
+        $log = NotificationLog::query()
             ->where('registration_id', $this->registrationId)
             ->where('channel', $this->channel)
-            ->update([
-                'status' => 'failed',
-                'last_error' => $e === null ? 'Gagal tanpa keterangan.' : $this->errorMessage($e),
-                'updated_at' => now(),
-            ]);
-    }
+            ->first();
 
-    /**
-     * Pesan untuk notification_logs.last_error, dibaca admin di halaman detail
-     * peserta. Exception SMTP/HTTP bisa memuat kredensial, alamat email, nomor
-     * HP, atau token tiket, jadi pesannya disaring dulu (docs/notifikasi.md),
-     * lalu dipotong 500 karakter.
-     */
-    private function errorMessage(Throwable $e): string
-    {
-        $message = preg_replace(
-            [
-                // smtp://user:pass@host → smtp://[disaring]@host
-                '~(\b[a-z][a-z0-9+.\-]*://)[^\s/@]+@~i',
-                '~\bAuthorization\s*[:=]\s*(?:(?:Bearer|Basic)\s+)?[^\s"\',;]+~i',
-                '~\b(Bearer|Basic)\s+[^\s"\',;]+~i',
-                // password=..., token: ...
-                '~\b(password|passwd|pwd|pass|secret|token|api[_-]?key|apikey|access[_-]?key|key|username|user)\s*[=:]\s*("[^"]*"|\'[^\']*\'|[^\s&"\',;]+)~i',
-                // with username "..." (pesan autentikasi Symfony Mailer)
-                '~\b(password|username|user)\s+("[^"]*"|\'[^\']*\')~i',
-                '~[a-z0-9._%+\-]+@[a-z0-9\-]+(?:\.[a-z0-9\-]+)+~i',
-                // token tiket (48 karakter), API key, dsb.
-                '~\b[A-Za-z0-9_\-]{32,}\b~',
-                '~(?<![\w\[])\+?\d(?:[\s\-.()]*\d){8,}~',
-            ],
-            [
-                '$1[disaring]@',
-                'Authorization: [disaring]',
-                '$1 [disaring]',
-                '$1=[disaring]',
-                '$1 "[disaring]"',
-                '[email]',
-                '[token]',
-                '[nomor]',
-            ],
-            $e->getMessage(),
-        );
+        if ($log === null) {
+            return;
+        }
 
-        return mb_substr($e::class.': '.($message ?? '[pesan tidak bisa dibaca]'), 0, 500);
+        if ($e === null) {
+            $log->forceFill(['status' => 'failed', 'last_error' => 'Gagal tanpa keterangan.'])->save();
+
+            return;
+        }
+
+        app(NotificationLogRecorder::class)->markPermanentlyFailed($log, $e);
     }
 }
