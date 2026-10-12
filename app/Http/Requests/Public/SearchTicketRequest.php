@@ -29,7 +29,7 @@ class SearchTicketRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'contact.required' => 'Nomor WhatsApp atau email wajib diisi.',
+            'contact.required' => 'Nomor HP atau email wajib diisi.',
         ];
     }
 

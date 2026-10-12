@@ -18,11 +18,11 @@
 
                 <div class="find-card__intro">
                     <h1 class="h1-page">Cari tiket saya</h1>
-                    <p class="find-card__lead">Masukkan nomor WhatsApp atau email yang dipakai saat mendaftar. Link e-ticket akan dikirim ulang ke {{ $whatsappActive ? 'kontak tersebut' : 'email yang terdaftar' }}.</p>
+                    <p class="find-card__lead">Masukkan nomor HP atau email yang dipakai saat mendaftar. Link e-ticket akan dikirim ulang ke {{ $whatsappActive ? 'kontak tersebut' : 'email yang terdaftar' }}.</p>
                 </div>
 
                 <x-field
-                    label="Nomor WhatsApp atau email"
+                    label="Nomor HP atau email"
                     name="contact"
                     id="contact"
                     autocomplete="off"

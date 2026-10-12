@@ -94,9 +94,10 @@ class RegistrationAdminTest extends TestCase
             'status' => 'pending',
             'attempts' => 0,
         ]);
+        $failed = $this->makeRegistration();
         NotificationLog::create([
-            'registration_id' => $registration->id,
-            'channel' => 'whatsapp',
+            'registration_id' => $failed->id,
+            'channel' => 'email',
             'status' => 'failed',
             'attempts' => 3,
             'last_error' => 'Koneksi gagal',
@@ -104,8 +105,22 @@ class RegistrationAdminTest extends TestCase
 
         $this->actingAs($this->admin)->get('/admin/registrations/'.$registration->id)
             ->assertOk()
-            ->assertSeeText('Menunggu')
+            ->assertSeeText('Menunggu');
+
+        $this->actingAs($this->admin)->get('/admin/registrations/'.$failed->id)
+            ->assertOk()
             ->assertSeeText('Gagal');
+    }
+
+    public function test_detail_peserta_tidak_menampilkan_baris_kanal_whatsapp(): void
+    {
+        $registration = $this->makeRegistration();
+        NotificationLog::create(['registration_id' => $registration->id, 'channel' => 'email', 'status' => 'sent', 'sent_at' => now()]);
+        NotificationLog::create(['registration_id' => $registration->id, 'channel' => 'whatsapp', 'status' => 'sent', 'sent_at' => now()]);
+
+        $this->actingAs($this->admin)->get('/admin/registrations/'.$registration->id)
+            ->assertOk()
+            ->assertDontSeeText('whatsapp');
     }
 
     public function test_daftar_peserta_menampilkan_dan_menyaring_jalur_verifikasi(): void

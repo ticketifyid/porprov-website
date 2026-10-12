@@ -203,7 +203,7 @@
                 <div class="sg-box" style="max-width: 100%;">
                     <div class="sg-label">Info — pesan netral cari tiket</div>
                     <x-alert variant="info">
-                        Jika data terdaftar, link e-ticket sudah dikirim ulang ke email dan WhatsApp Anda. Cek juga folder spam.
+                        Jika data terdaftar, link e-ticket sudah dikirim ulang ke email Anda. Cek juga folder spam.
                     </x-alert>
                 </div>
             </div>
@@ -227,7 +227,7 @@
                             <x-icon name="check" :size="40" :stroke="3" />
                         </div>
                         <h1 class="h1-page" style="font-size: 26px;">Pendaftaran berhasil</h1>
-                        <p style="color: var(--muted);">E-ticket sudah dikirim ke email dan WhatsApp Anda. Jika belum masuk dalam beberapa menit, cek folder spam.</p>
+                        <p style="color: var(--muted);">E-ticket sudah dikirim ke email Anda. Jika belum masuk dalam beberapa menit, cek folder spam.</p>
                         <div class="summary-box">
                             <div class="summary-box__col">
                                 <span class="summary-box__label">Kode registrasi</span>
@@ -270,7 +270,7 @@
                     <x-step-number :number="2" />
                     <div class="step-item__body">
                         <div class="step-item__title">Terima e-ticket</div>
-                        <div class="step-item__desc">Link e-ticket berisi QR dikirim ke email dan WhatsApp Anda.</div>
+                        <div class="step-item__desc">Link e-ticket berisi QR dikirim ke email Anda.</div>
                     </div>
                 </div>
                 <div class="step-item">

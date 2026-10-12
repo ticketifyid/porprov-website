@@ -65,7 +65,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($registration->notificationLogs as $log)
+                        @forelse ($registration->notificationLogs->where('channel', 'email') as $log)
                             @php
                                 $statusBadge = match ($log->status) {
                                     'sent' => ['badge-light-success', 'Terkirim'],
