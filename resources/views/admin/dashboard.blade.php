@@ -60,44 +60,11 @@
         </div>
 
         <div class="row g-5 g-xl-8 mb-5">
-            <div class="col-md-4">
-                <div class="card card-flush h-100">
+            <div class="col-12">
+                <div class="card card-flush">
                     <div class="card-body">
                         <div class="fs-2hx fw-bold" data-dash="registrantCount">{{ $registrantCount }}</div>
                         <div class="fs-7 text-muted">Jumlah pendaftar</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-8">
-                <div class="card card-flush h-100">
-                    <div class="card-header">
-                        <h3 class="card-title">Status notifikasi</h3>
-                    </div>
-                    <div class="card-body pt-0 d-flex flex-wrap align-items-center gap-6">
-                        <div class="text-center">
-                            <span class="badge badge-light-success fs-6" data-dash="notifSent">{{ $notifSent }}</span>
-                            <div class="text-muted fs-7 mt-1">Terkirim</div>
-                        </div>
-                        <div class="text-center">
-                            <span class="badge badge-light-warning fs-6" data-dash="notifPending">{{ $notifPending }}</span>
-                            <div class="text-muted fs-7 mt-1">Menunggu</div>
-                        </div>
-                        <div class="text-center">
-                            <a href="{{ route('admin.registrations.index', ['notif' => 'failed']) }}"
-                               class="badge badge-light-danger fs-6" data-dash="notifFailed">{{ $notifFailed }}</a>
-                            <div class="text-muted fs-7 mt-1">Gagal</div>
-                        </div>
-                        <div class="ms-md-auto">
-                            <form method="POST" action="{{ route('admin.dashboard.resend-failed') }}"
-                                  data-confirm="Kirim ulang semua notifikasi yang gagal?"
-                                  data-confirm-detail="Notifikasi akan dikirim ulang untuk setiap peserta yang notifikasi emailnya gagal dan belum dibatalkan.">
-                                @csrf
-                                <button type="submit" class="btn btn-sm btn-light-danger">
-                                    Kirim ulang semua yang gagal (<span data-dash="emailFailedCount">{{ $emailFailedCount }}</span>)
-                                </button>
-                            </form>
-                        </div>
                     </div>
                 </div>
             </div>
