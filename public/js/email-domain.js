@@ -22,7 +22,7 @@
         function updatePreview() {
             var localVal = local.value.trim();
             var domain = currentDomain();
-            preview.textContent = (localVal && domain) ? (localVal + '@' + domain) : '—';
+            preview.textContent = (localVal && domain) ? (localVal + '@' + domain) : 'belum diisi';
         }
 
         function toggleCustomDomain() {

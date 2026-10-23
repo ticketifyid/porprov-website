@@ -19,14 +19,16 @@ class RegistrationAdminController extends Controller
     public function index(Request $request): View
     {
         $keyword = trim((string) $request->query('q', ''));
-        $via = (string) $request->query('via', '');
-        $via = array_key_exists($via, Registration::VERIFIED_VIA) ? $via : '';
+        $status = (string) $request->query('status', '');
+        $status = in_array($status, ['pending', 'redeemed', 'cancelled'], true) ? $status : '';
         $notif = (string) $request->query('notif', '');
         $notif = $notif === 'failed' ? $notif : '';
 
         $registrations = Registration::query()
             ->with('regency')
-            ->when($via !== '', fn ($query) => $query->where('verified_via', $via))
+            ->when($status === 'cancelled', fn ($query) => $query->whereNotNull('cancelled_at'))
+            ->when($status === 'redeemed', fn ($query) => $query->whereNull('cancelled_at')->whereNotNull('redeemed_at'))
+            ->when($status === 'pending', fn ($query) => $query->whereNull('cancelled_at')->whereNull('redeemed_at'))
             ->when($notif === 'failed', function ($query) {
                 $query->whereHas('notificationLogs', fn ($query) => $query->where('status', 'failed'));
             })
@@ -36,6 +38,7 @@ class RegistrationAdminController extends Controller
                 $query->where(function ($query) use ($keyword, $escaped) {
                     $query->where('name', 'like', '%'.$escaped.'%')
                         ->orWhere('code', 'like', '%'.$escaped.'%')
+                        ->orWhere('email', 'like', '%'.$escaped.'%')
                         ->orWhere('phone', PhoneNormalizer::normalize($keyword));
                 });
             })
@@ -46,7 +49,7 @@ class RegistrationAdminController extends Controller
         return view('admin.registrations.index', [
             'registrations' => $registrations,
             'keyword' => $keyword,
-            'via' => $via,
+            'status' => $status,
             'notif' => $notif,
         ]);
     }

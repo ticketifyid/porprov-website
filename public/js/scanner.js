@@ -188,7 +188,7 @@
 
     function nextButton() {
         return '<div class="scan-result__actions">' +
-            '<button type="button" class="scan-btn scan-btn--next" data-scan-action="next">Scan berikutnya</button>' +
+            '<button type="button" class="btn btn-lg scan-btn scan-btn--next" data-scan-action="next">Scan berikutnya</button>' +
             '</div>';
     }
 
@@ -281,9 +281,9 @@
             identityBlock(registration) +
             '<p class="scan-result__detail">Jumlah gelang: <strong>' + escapeHtml(registration.ticket_qty) + '</strong></p>' +
             '<div class="scan-result__actions">' +
-            '<button type="button" class="scan-btn scan-btn--confirm" data-scan-action="confirm">' +
+            '<button type="button" class="btn btn-lg scan-btn scan-btn--confirm" data-scan-action="confirm">' +
             'Serahkan ' + escapeHtml(registration.ticket_qty) + ' gelang</button>' +
-            '<button type="button" class="scan-btn scan-btn--next" data-scan-action="next">Batal</button>' +
+            '<button type="button" class="btn btn-lg scan-btn scan-btn--next" data-scan-action="next">Batal</button>' +
             '</div>'
         );
     }
@@ -354,12 +354,12 @@
                             ? ' · sudah ditukar ' + escapeHtml(candidate.redeemed_at_label)
                             : '');
 
-                return '<li class="scan-candidate">' +
+                return '<li class="scan-candidate d-flex align-items-center justify-content-between gap-3 border border-dashed rounded p-4">' +
                     '<span>' +
-                    '<span class="scan-candidate__name">' + escapeHtml(candidate.name) + '</span><br>' +
-                    '<span class="scan-candidate__meta">' + meta + '</span>' +
+                    '<span class="scan-candidate__name fw-bold fs-6 text-gray-900">' + escapeHtml(candidate.name) + '</span><br>' +
+                    '<span class="scan-candidate__meta fs-7 text-gray-700">' + meta + '</span>' +
                     '</span>' +
-                    '<button type="button" class="scan-candidate__pick"' +
+                    '<button type="button" class="btn btn-sm btn-success scan-candidate__pick"' +
                     ' data-scan-pick="' + escapeHtml(candidate.id) + '"' +
                     ' data-scan-qty="' + escapeHtml(candidate.ticket_qty) + '"' +
                     ' data-scan-name="' + escapeHtml(candidate.name) + '"' +
@@ -435,7 +435,10 @@
         writeStore(STORAGE_MODE, state.mode);
 
         el.modeButtons.forEach(function (button) {
-            button.setAttribute('aria-pressed', button.getAttribute('data-scan-mode') === state.mode ? 'true' : 'false');
+            var active = button.getAttribute('data-scan-mode') === state.mode;
+
+            button.setAttribute('aria-pressed', active ? 'true' : 'false');
+            button.classList.toggle('active', active);
         });
 
         el.camera.hidden = state.mode !== 'camera';

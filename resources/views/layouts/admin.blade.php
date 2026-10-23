@@ -53,7 +53,7 @@
                     </div>
 
                     <div class="d-flex align-items-center flex-grow-1 flex-lg-grow-0">
-                        <a href="/" class="d-lg-none fw-bolder fs-4 text-gray-800">Ticketify</a>
+                        <a href="/" class="d-lg-none admin-brand-link"><img src="{{ asset('ticketify-logo-512.png') }}" alt="Ticketify" class="admin-brand-logo admin-brand-logo-sm"></a>
                     </div>
 
                     <div class="d-flex align-items-stretch justify-content-between flex-lg-grow-1">
@@ -135,7 +135,7 @@
                      data-kt-drawer-toggle="#kt_app_sidebar_mobile_toggle">
 
                     <div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
-                        <a href="/" class="admin-sidebar-brand fw-bolder fs-3">Ticketify</a>
+                        <a href="/" class="admin-sidebar-brand"><img src="{{ asset('ticketify-logo-512.png') }}" alt="Ticketify" class="admin-brand-logo"></a>
                     </div>
 
                     <div class="app-sidebar-menu overflow-hidden flex-column-fluid">

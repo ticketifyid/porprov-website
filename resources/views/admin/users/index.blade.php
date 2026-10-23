@@ -12,24 +12,60 @@
     <a href="{{ route('admin.users.create') }}" class="btn btn-primary">Tambah Akun</a>
 @endsection
 
+@php
+    $hasFilter = $keyword !== '' || $role !== '';
+@endphp
+
 @section('content')
     @if (session('status'))
         <div class="alert alert-success">{{ session('status') }}</div>
     @endif
 
     <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Daftar akun petugas</h3>
-        </div>
-        <div class="card-body">
+        <form method="GET" data-live-filter class="card-header border-0 pt-6 gap-3">
+            <div class="card-title w-100 w-md-auto m-0">
+                <div class="d-flex align-items-center position-relative w-100">
+                    <i class="ki-duotone ki-magnifier fs-3 position-absolute ms-5"><span class="path1"></span><span class="path2"></span></i>
+                    <input type="search" name="q" class="form-control form-control-solid w-100 w-md-300px ps-13"
+                           placeholder="Cari nama atau username" aria-label="Cari akun" value="{{ $keyword }}">
+                </div>
+            </div>
+
+            <div class="card-toolbar w-100 w-md-auto m-0">
+                <div class="d-flex flex-wrap align-items-center gap-3 w-100">
+                    <select name="role" class="form-select form-select-solid flex-grow-1 w-md-175px" aria-label="Tipe akun">
+                        <option value="">Semua tipe akun</option>
+                        @foreach (\App\Enums\UserRole::cases() as $case)
+                            <option value="{{ $case->value }}" @selected($role === $case->value)>{{ $case->label() }}</option>
+                        @endforeach
+                    </select>
+                    <span data-live-reset>
+                        @if ($hasFilter)
+                            <a href="{{ route('admin.users.index') }}" class="btn btn-light">Reset</a>
+                        @endif
+                    </span>
+                </div>
+            </div>
+        </form>
+        <div class="card-body pt-0" data-live-results aria-live="polite">
             @if ($users->isEmpty())
-                <x-admin-empty-state
-                    icon="ki-profile-user"
-                    title="Belum ada akun petugas."
-                    description="Tambahkan akun admin atau petugas scan untuk mulai mengelola hari-H."
-                    :action-url="route('admin.users.create')"
-                    action-label="Tambah Akun"
-                />
+                @if ($hasFilter)
+                    <x-admin-empty-state
+                        icon="ki-profile-user"
+                        title="Tidak ada akun yang cocok."
+                        description="Coba ubah kata kunci atau filter pencarian."
+                        :action-url="route('admin.users.index')"
+                        action-label="Hapus filter"
+                    />
+                @else
+                    <x-admin-empty-state
+                        icon="ki-profile-user"
+                        title="Belum ada akun petugas."
+                        description="Tambahkan akun admin atau petugas scan untuk mulai mengelola hari-H."
+                        :action-url="route('admin.users.create')"
+                        action-label="Tambah Akun"
+                    />
+                @endif
             @else
                 {{-- Tabel di layar >= 768px --}}
                 <div class="table-responsive d-none d-md-block">
@@ -90,3 +126,7 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script src="@versionedAsset('js/admin-live-filter.js')"></script>
+@endpush

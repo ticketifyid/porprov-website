@@ -13,9 +13,26 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        return view('admin.users.index', ['users' => User::query()->orderBy('name')->get()]);
+        $keyword = trim((string) $request->query('q', ''));
+        $role = (string) $request->query('role', '');
+        $role = in_array($role, ['admin', 'scanner'], true) ? $role : '';
+
+        $users = User::query()
+            ->when($role !== '', fn ($query) => $query->where('role', $role))
+            ->when($keyword !== '', function ($query) use ($keyword) {
+                $escaped = addcslashes($keyword, '%_\\');
+
+                $query->where(function ($query) use ($escaped) {
+                    $query->where('name', 'like', '%'.$escaped.'%')
+                        ->orWhere('username', 'like', '%'.$escaped.'%');
+                });
+            })
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.users.index', ['users' => $users, 'keyword' => $keyword, 'role' => $role]);
     }
 
     public function create(): View

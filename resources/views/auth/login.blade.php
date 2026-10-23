@@ -8,7 +8,7 @@
 
         <div class="text-center mb-11">
             <h1 class="text-gray-900 fw-bolder mb-3">Masuk</h1>
-            <div class="text-gray-500 fw-semibold fs-6">Panel petugas &amp; administrator Ticketify</div>
+            <div class="text-gray-700 fw-semibold fs-6">Panel petugas &amp; administrator Ticketify</div>
         </div>
 
         @if (session('status'))
@@ -17,7 +17,7 @@
 
         <div class="fv-row mb-8">
             <label for="username" class="form-label fs-6 fw-bold text-gray-900">Username</label>
-            <input type="text" id="username" name="username" value="{{ old('username') }}" autofocus autocomplete="off"
+            <input type="text" id="username" name="username" value="{{ old('username') }}" autofocus autocomplete="username"
                    class="form-control bg-transparent @error('username') is-invalid @enderror">
             @error('username')
                 <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -26,7 +26,7 @@
 
         <div class="fv-row mb-3">
             <label for="password" class="form-label fs-6 fw-bold text-gray-900">Kata sandi</label>
-            <input type="password" id="password" name="password" autocomplete="off"
+            <input type="password" id="password" name="password" autocomplete="current-password"
                    class="form-control bg-transparent @error('password') is-invalid @enderror">
             @error('password')
                 <div class="invalid-feedback d-block">{{ $message }}</div>

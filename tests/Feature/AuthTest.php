@@ -28,6 +28,17 @@ class AuthTest extends TestCase
         $response->assertSee('password', false);
     }
 
+    public function test_login_page_memakai_panel_brand_dan_autocomplete_yang_benar(): void
+    {
+        $response = $this->get('/login')->assertOk();
+
+        // Gambar stok Metronic tidak dipakai lagi; panel kanan navy dengan logo Ticketify.
+        $response->assertDontSee('bg4.jpg', false);
+        $response->assertSee('ticketify-logo-512.png', false);
+        $response->assertSee('autocomplete="username"', false);
+        $response->assertSee('autocomplete="current-password"', false);
+    }
+
     public function test_admin_can_login_and_is_redirected_to_admin_dashboard(): void
     {
         $user = $this->makeUser(['role' => 'admin']);

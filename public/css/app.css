@@ -591,6 +591,13 @@ input, select, textarea {
   background: transparent;
 }
 
+/* Indikator fokus dipindah ke pembungkus supaya seluruh kolom (nama, @, domain)
+   terlihat terfokus. Warna --blue 5,1:1 di atas --ground, 5,7:1 di atas putih. */
+.email-compound:focus-within {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
 .email-compound input:focus {
   outline: none;
 }
@@ -1604,6 +1611,13 @@ input, select, textarea {
 
 .site-footer strong {
   color: var(--navy);
+}
+
+/* Area sentuh 44px tanpa mengubah tampilan: padding diimbangi margin negatif. */
+.site-footer a {
+  display: inline-block;
+  padding: 12px 0;
+  margin: -12px 0;
 }
 
 .site-footer--center {

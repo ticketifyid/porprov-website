@@ -145,36 +145,78 @@ class RegistrationAdminTest extends TestCase
         $this->assertSame('sent', NotificationLog::where('registration_id', $registration->id)->where('channel', 'whatsapp')->value('status'));
     }
 
-    public function test_daftar_peserta_menampilkan_dan_menyaring_jalur_verifikasi(): void
+    public function test_daftar_peserta_menampilkan_kontak_dan_menyaring_status(): void
     {
-        $turnstile = $this->makeRegistration(['name' => 'Peserta Turnstile', 'verified_via' => 'turnstile']);
-        $captcha = $this->makeRegistration(['name' => 'Peserta Captcha', 'verified_via' => 'captcha']);
-        $none = $this->makeRegistration(['name' => 'Peserta Lama']);
+        $pending = $this->makeRegistration(['name' => 'Peserta Belum', 'email' => 'belum@example.com']);
+        $redeemed = $this->makeRegistration(['name' => 'Peserta Tukar', 'redeemed_at' => now()]);
+        $cancelled = $this->makeRegistration(['name' => 'Peserta Batal', 'cancelled_at' => now()]);
 
         $this->actingAs($this->admin)->get('/admin/registrations')
             ->assertOk()
-            ->assertSeeText('Verifikasi')
-            ->assertSee('<option value="captcha"', false)
-            ->assertSee($turnstile->code)->assertSee($captcha->code)->assertSee($none->code);
+            ->assertSeeText('No. HP')
+            ->assertSeeText('belum@example.com')
+            ->assertDontSeeText('Verifikasi')
+            ->assertSee('<option value="redeemed"', false)
+            ->assertSee($pending->code)->assertSee($redeemed->code)->assertSee($cancelled->code);
 
-        $this->actingAs($this->admin)->get('/admin/registrations?via=captcha')
+        $this->actingAs($this->admin)->get('/admin/registrations?status=redeemed')
             ->assertOk()
-            ->assertSee($captcha->code)
-            ->assertDontSee($turnstile->code)
-            ->assertDontSee($none->code)
-            ->assertSee('<option value="captcha" selected', false);
+            ->assertSee($redeemed->code)
+            ->assertDontSee($pending->code)
+            ->assertDontSee($cancelled->code)
+            ->assertSee('<option value="redeemed" selected', false);
 
-        $this->actingAs($this->admin)->get('/admin/registrations?via=turnstile&q=Peserta')
-            ->assertOk()
-            ->assertSee($turnstile->code)
-            ->assertDontSee($captcha->code);
+        $this->actingAs($this->admin)->get('/admin/registrations?status=pending')
+            ->assertOk()->assertSee($pending->code)->assertDontSee($redeemed->code)->assertDontSee($cancelled->code);
+
+        $this->actingAs($this->admin)->get('/admin/registrations?status=cancelled&q=Peserta')
+            ->assertOk()->assertSee($cancelled->code)->assertDontSee($pending->code);
+
+        $this->actingAs($this->admin)->get('/admin/registrations?q=belum@example')
+            ->assertOk()->assertSee($pending->code)->assertDontSee($redeemed->code);
 
         // Nilai tak dikenal diabaikan, bukan error.
-        $this->actingAs($this->admin)->get('/admin/registrations?via=xss')
-            ->assertOk()->assertSee($none->code);
+        $this->actingAs($this->admin)->get('/admin/registrations?status=xss')
+            ->assertOk()->assertSee($pending->code);
+    }
 
-        $this->actingAs($this->admin)->get('/admin/registrations/'.$captcha->id)
-            ->assertOk()->assertSeeText('Captcha gambar');
+    public function test_daftar_akun_bisa_dicari_dan_disaring_tipe(): void
+    {
+        User::factory()->create(['name' => 'Sari Scanner', 'username' => 'sari', 'role' => 'scanner']);
+        User::factory()->create(['name' => 'Andi Admin', 'username' => 'andi', 'role' => 'admin']);
+
+        $this->actingAs($this->admin)->get('/admin/users?role=scanner')
+            ->assertOk()->assertSee('Sari Scanner')->assertDontSee('Andi Admin')
+            ->assertSee('<option value="scanner" selected', false);
+
+        $this->actingAs($this->admin)->get('/admin/users?q=andi')
+            ->assertOk()->assertSee('Andi Admin')->assertDontSee('Sari Scanner');
+
+        $this->actingAs($this->admin)->get('/admin/users?role=xss')
+            ->assertOk()->assertSee('Sari Scanner')->assertSee('Andi Admin');
+    }
+
+    public function test_daftar_peserta_dan_akun_mengumumkan_hasil_pencarian_ke_pembaca_layar(): void
+    {
+        $this->actingAs($this->admin)->get('/admin/registrations')
+            ->assertOk()
+            ->assertSee('data-live-results', false)
+            ->assertSee('aria-live="polite"', false);
+
+        $this->actingAs($this->admin)->get('/admin/users')
+            ->assertOk()
+            ->assertSee('aria-live="polite"', false);
+    }
+
+    public function test_detail_peserta_tanpa_error_notifikasi_tidak_memakai_tanda_pisah_panjang(): void
+    {
+        $registration = $this->makeRegistration();
+        NotificationLog::create(['registration_id' => $registration->id, 'channel' => 'email', 'status' => 'sent', 'sent_at' => now()]);
+
+        $this->actingAs($this->admin)->get('/admin/registrations/'.$registration->id)
+            ->assertOk()
+            ->assertDontSee('—', false)
+            ->assertDontSee('&mdash;', false);
     }
 
     public function test_daftar_peserta_bisa_disaring_notifikasi_gagal(): void

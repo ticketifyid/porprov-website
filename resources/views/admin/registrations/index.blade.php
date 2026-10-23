@@ -9,7 +9,7 @@
 @endsection
 
 @php
-    $hasFilter = $keyword !== '' || $via !== '' || $notif !== '';
+    $hasFilter = $keyword !== '' || $status !== '' || $notif !== '';
 @endphp
 
 @section('content')
@@ -22,7 +22,7 @@
 
     <div class="card">
         {{-- Pola daftar Metronic: pencarian di kiri header kartu, filter dan tombol di kanan. --}}
-        <form method="GET" class="card-header border-0 pt-6 gap-3">
+        <form method="GET" data-live-filter class="card-header border-0 pt-6 gap-3">
             @if ($notif !== '')
                 <input type="hidden" name="notif" value="{{ $notif }}">
             @endif
@@ -30,27 +30,28 @@
             <div class="card-title w-100 w-md-auto m-0">
                 <div class="d-flex align-items-center position-relative w-100">
                     <i class="ki-duotone ki-magnifier fs-3 position-absolute ms-5"><span class="path1"></span><span class="path2"></span></i>
-                    <input type="search" name="q" class="form-control form-control-solid w-100 w-md-250px ps-13"
-                           placeholder="Cari nama, kode, atau nomor HP" aria-label="Cari peserta" value="{{ $keyword }}">
+                    <input type="search" name="q" class="form-control form-control-solid w-100 w-md-300px ps-13"
+                           placeholder="Cari nama, kode, HP, atau email" aria-label="Cari peserta" value="{{ $keyword }}">
                 </div>
             </div>
 
             <div class="card-toolbar w-100 w-md-auto m-0">
                 <div class="d-flex flex-wrap align-items-center gap-3 w-100">
-                    <select name="via" class="form-select form-select-solid flex-grow-1 w-md-175px" aria-label="Jalur verifikasi">
-                        <option value="">Semua verifikasi</option>
-                        @foreach (\App\Models\Registration::VERIFIED_VIA as $value => $label)
-                            <option value="{{ $value }}" @selected($via === $value)>{{ $label }}</option>
+                    <select name="status" class="form-select form-select-solid flex-grow-1 w-md-175px" aria-label="Status">
+                        <option value="">Semua status</option>
+                        @foreach (['pending' => 'Belum ditukar', 'redeemed' => 'Sudah ditukar', 'cancelled' => 'Dibatalkan'] as $value => $label)
+                            <option value="{{ $value }}" @selected($status === $value)>{{ $label }}</option>
                         @endforeach
                     </select>
-                    <button type="submit" class="btn btn-primary">Cari</button>
-                    @if ($hasFilter)
-                        <a href="{{ route('admin.registrations.index') }}" class="btn btn-light">Reset</a>
-                    @endif
+                    <span data-live-reset>
+                        @if ($hasFilter)
+                            <a href="{{ route('admin.registrations.index') }}" class="btn btn-light">Reset</a>
+                        @endif
+                    </span>
                 </div>
             </div>
         </form>
-        <div class="card-body pt-0">
+        <div class="card-body pt-0" data-live-results aria-live="polite">
             @if ($registrations->isEmpty())
                 <x-admin-empty-state
                     icon="ki-search-list"
@@ -67,10 +68,11 @@
                             <tr>
                                 <th>Kode</th>
                                 <th>Nama</th>
+                                <th>No. HP</th>
+                                <th>Email</th>
                                 <th>Kab/Kota</th>
                                 <th>Tiket</th>
                                 <th>Status</th>
-                                <th>Verifikasi</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -79,6 +81,8 @@
                                 <tr>
                                     <td>{{ $registration->code }}</td>
                                     <td>{{ $registration->name }}</td>
+                                    <td>{{ $registration->phone }}</td>
+                                    <td>{{ $registration->email }}</td>
                                     <td>{{ $registration->regency?->name }}</td>
                                     <td>{{ $registration->ticket_qty }}</td>
                                     <td>
@@ -88,15 +92,6 @@
                                             <span class="badge badge-light-success">Sudah ditukar</span>
                                         @else
                                             <span class="badge badge-light-warning">Belum ditukar</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if ($registration->verified_via === 'captcha')
-                                            <span class="badge badge-light-info">Captcha gambar</span>
-                                        @elseif ($registration->verified_via === 'turnstile')
-                                            <span class="badge badge-light">Turnstile</span>
-                                        @else
-                                            <span class="text-muted">&mdash;</span>
                                         @endif
                                     </td>
                                     <td>
@@ -116,6 +111,8 @@
                                 <div class="flex-grow-1">
                                     <div class="fw-bold fs-6">{{ $registration->name }}</div>
                                     <div class="text-muted fs-7">{{ $registration->code }} &middot; {{ $registration->regency?->name }}</div>
+                                    <div class="text-muted fs-7">{{ $registration->phone }}</div>
+                                    <div class="text-muted fs-7 text-break">{{ $registration->email }}</div>
                                     <div class="text-muted fs-7">{{ $registration->ticket_qty }} tiket</div>
                                     <div class="mt-2 d-flex flex-wrap gap-1">
                                         @if ($registration->cancelled_at)
@@ -124,11 +121,6 @@
                                             <span class="badge badge-light-success">Sudah ditukar</span>
                                         @else
                                             <span class="badge badge-light-warning">Belum ditukar</span>
-                                        @endif
-                                        @if ($registration->verified_via === 'captcha')
-                                            <span class="badge badge-light-info">Captcha gambar</span>
-                                        @elseif ($registration->verified_via === 'turnstile')
-                                            <span class="badge badge-light">Turnstile</span>
                                         @endif
                                     </div>
                                 </div>
@@ -143,3 +135,7 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script src="@versionedAsset('js/admin-live-filter.js')"></script>
+@endpush

@@ -45,7 +45,7 @@
            spellcheck="false" value="{{ $isCustomDomain ? $domainOtherValue : '' }}"
            data-email-domain-other @if (! $isCustomDomain) hidden @endif>
 
-    <div class="email-preview">Email lengkap: <strong data-email-preview>&mdash;</strong></div>
+    <div class="email-preview">Email lengkap: <strong data-email-preview>belum diisi</strong></div>
     <div class="field__helper">Satu email hanya bisa mendaftar sekali.</div>
 
     {{-- Email dirakit dari tiga field, tapi errornya selalu tampil di sini

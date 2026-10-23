@@ -7,6 +7,7 @@
     <x-favicon />
     <link href="{{ asset('metronic/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('metronic/css/style.bundle.css') }}" rel="stylesheet" type="text/css">
+    <link href="@versionedAsset('css/admin.css')" rel="stylesheet" type="text/css">
     <script>
         var defaultThemeMode = "system";
         var themeMode;
@@ -37,12 +38,13 @@
                 </div>
             </div>
 
-            <div class="d-flex flex-lg-row-fluid w-lg-50 bgi-size-cover bgi-position-center order-1 order-lg-2"
-                 style="background-image: url({{ asset('metronic/media/auth/bg4.jpg') }})">
+            {{-- Panel brand: navy yang sama dengan halaman peserta + strip empat warna Porprov di dasar. --}}
+            <div class="auth-brand d-flex flex-lg-row-fluid w-lg-50 order-1 order-lg-2">
                 <div class="d-flex flex-column flex-center py-7 py-lg-15 px-5 px-md-15 w-100">
-                    <h1 class="text-white fs-2qx fw-bolder text-center mb-5">Ticketify</h1>
-                    <p class="text-white fs-4 text-center">Registrasi &amp; e-tiket Opening Ceremony Porprov Jateng XVII 2026</p>
+                    <img src="{{ asset('ticketify-logo-512.png') }}" alt="Ticketify" class="auth-brand__logo mb-5">
+                    <p class="auth-brand__tagline fs-4 text-center m-0">Registrasi &amp; e-tiket Opening Ceremony Porprov Jateng XVII 2026</p>
                 </div>
+                <div class="auth-brand__strip" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
             </div>
         </div>
     </div>

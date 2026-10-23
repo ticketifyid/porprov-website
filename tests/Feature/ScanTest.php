@@ -74,6 +74,14 @@ class ScanTest extends TestCase
         $response->assertDontSee('kt_app_sidebar', false);
     }
 
+    public function test_halaman_scanner_tanpa_tanda_pisah_panjang_di_teks_ui(): void
+    {
+        $this->actingAs($this->officer)->get('/scanner')
+            ->assertOk()
+            ->assertDontSee('—', false)
+            ->assertDontSee('&mdash;', false);
+    }
+
     // ---------- mode kamera (dua langkah) ----------
 
     public function test_kamera_langkah_pertama_tidak_mengubah_status_dan_tidak_menulis_log_sukses(): void

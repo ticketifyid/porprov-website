@@ -99,7 +99,7 @@
                                         <span class="text-truncate notif-error-text d-inline-block align-bottom"
                                               data-bs-toggle="tooltip" title="{{ $log->last_error }}">{{ $log->last_error }}</span>
                                     @else
-                                        <span class="text-muted">—</span>
+                                        <span class="text-muted">Tidak ada</span>
                                     @endif
                                 </td>
                             </tr>
