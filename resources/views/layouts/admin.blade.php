@@ -135,7 +135,7 @@
                      data-kt-drawer-toggle="#kt_app_sidebar_mobile_toggle">
 
                     <div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
-                        <a href="/" class="fw-bolder fs-3 text-white">Ticketify</a>
+                        <a href="/" class="admin-sidebar-brand fw-bolder fs-3">Ticketify</a>
                         <div id="kt_app_sidebar_toggle"
                              class="app-sidebar-toggle btn btn-icon btn-shadow btn-sm btn-color-muted btn-active-color-primary body-bg h-30px w-30px position-absolute top-50 start-100 translate-middle rotate"
                              data-kt-toggle="true" data-kt-toggle-state="active"
@@ -216,7 +216,7 @@
                     </div>
 
                     <div class="app-sidebar-footer flex-column-auto pt-2 pb-6 px-6" id="kt_app_sidebar_footer">
-                        <div class="text-center text-white-50 fs-8">Ticketify &copy; {{ date('Y') }}</div>
+                        <div class="admin-sidebar-footnote text-center fs-8">Ticketify &copy; {{ date('Y') }}</div>
                     </div>
                 </div>
 
