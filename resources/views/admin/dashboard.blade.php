@@ -104,29 +104,7 @@
         </div>
 
         <div class="row g-5 g-xl-8 mb-5">
-            <div class="col-md-4">
-                <div class="card card-flush h-100">
-                    <div class="card-header">
-                        <h3 class="card-title">Jalur verifikasi</h3>
-                    </div>
-                    <div class="card-body pt-0 d-flex flex-column gap-3">
-                        <div class="d-flex justify-content-between">
-                            <span>Turnstile</span>
-                            <span class="fw-bold" data-dash="verifiedTurnstile">{{ $verifiedTurnstile }}</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Captcha gambar</span>
-                            <span class="fw-bold" data-dash="verifiedCaptcha">{{ $verifiedCaptcha }}</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Tanpa verifikasi</span>
-                            <span class="fw-bold" data-dash="verifiedNone">{{ $verifiedNone }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-8">
+            <div class="col-12">
                 <div class="card card-flush h-100">
                     <div class="card-header">
                         <h3 class="card-title">Pendaftar terbaru</h3>
@@ -147,12 +125,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-body">
-                <h3 class="mb-0">Selamat datang, {{ auth()->user()->name }}.</h3>
             </div>
         </div>
     </div>
