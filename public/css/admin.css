@@ -18,6 +18,50 @@
     color: var(--bs-gray-700);
 }
 
+/* Data peserta di halaman detail: label abu (gray-700, ≥7:1 di kedua tema)
+   dan nilai tebal gelap, dua kolom; di HP label di atas nilainya. */
+.admin-kv {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: .875rem 2rem;
+    margin: 0;
+    font-size: 1.075rem;
+}
+
+.admin-kv dt {
+    color: var(--bs-gray-700);
+    font-weight: 500;
+}
+
+.admin-kv dd {
+    margin: 0;
+    color: var(--bs-gray-900);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+/* Badge status bisa panjang (tanggal + nama petugas): boleh turun baris. */
+.admin-kv .badge {
+    white-space: normal;
+    text-align: left;
+    line-height: 1.4;
+}
+
+@media (max-width: 575.98px) {
+    .admin-kv {
+        grid-template-columns: minmax(0, 1fr);
+        gap: .125rem;
+    }
+
+    .admin-kv dd {
+        margin-bottom: .75rem;
+    }
+
+    .admin-kv dd:last-child {
+        margin-bottom: 0;
+    }
+}
+
 /* Potongan teks error notifikasi di detail peserta, dengan tooltip Metronic
    (data-bs-toggle="tooltip") untuk menampilkan pesan lengkapnya. */
 .notif-error-text {

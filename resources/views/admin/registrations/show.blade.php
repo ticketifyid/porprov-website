@@ -23,28 +23,42 @@
             <h3 class="card-title">{{ $registration->name }}</h3>
         </div>
         <div class="card-body">
-            <p class="text-muted mb-1">Kode: {{ $registration->code }}</p>
-            <p class="text-muted mb-1">Kab/Kota: {{ $registration->regency?->name }}</p>
-            <p class="text-muted mb-1">Email: {{ $registration->email }}</p>
-            <p class="text-muted mb-1">No. HP: {{ $registration->phone }}</p>
-            <p class="text-muted mb-1">Jumlah tiket: {{ $registration->ticket_qty }}</p>
-            <p class="text-muted mb-3">Verifikasi: {{ \App\Models\Registration::VERIFIED_VIA[$registration->verified_via] ?? '—' }}</p>
+            <dl class="admin-kv">
+                <dt>Status</dt>
+                <dd>
+                    @if ($registration->cancelled_at)
+                        <span class="badge badge-light-danger">
+                            Dibatalkan {{ $registration->cancelled_at->locale('id')->translatedFormat('j F Y, H.i') }}
+                            oleh {{ $registration->canceller?->name }}
+                        </span>
+                    @elseif ($registration->redeemed_at)
+                        <span class="badge badge-light-success">
+                            Sudah ditukar {{ $registration->redeemed_at->locale('id')->translatedFormat('j F Y, H.i') }}
+                            oleh {{ $registration->redeemer?->name }}
+                        </span>
+                    @else
+                        <span class="badge badge-light-warning">Belum ditukar</span>
+                    @endif
+                </dd>
 
-            <p class="mb-0">
-                @if ($registration->cancelled_at)
-                    <span class="badge badge-light-danger">
-                        Dibatalkan {{ $registration->cancelled_at->locale('id')->translatedFormat('j F Y, H.i') }}
-                        oleh {{ $registration->canceller?->name }}
-                    </span>
-                @elseif ($registration->redeemed_at)
-                    <span class="badge badge-light-success">
-                        Sudah ditukar {{ $registration->redeemed_at->locale('id')->translatedFormat('j F Y, H.i') }}
-                        oleh {{ $registration->redeemer?->name }}
-                    </span>
-                @else
-                    <span class="badge badge-light-warning">Belum ditukar</span>
-                @endif
-            </p>
+                <dt>Kode</dt>
+                <dd>{{ $registration->code }}</dd>
+
+                <dt>Jumlah tiket</dt>
+                <dd>{{ $registration->ticket_qty }}</dd>
+
+                <dt>Kab/Kota</dt>
+                <dd>{{ $registration->regency?->name ?? '-' }}</dd>
+
+                <dt>Email</dt>
+                <dd>{{ $registration->email }}</dd>
+
+                <dt>No. HP</dt>
+                <dd>{{ $registration->phone }}</dd>
+
+                <dt>Verifikasi</dt>
+                <dd>{{ \App\Models\Registration::VERIFIED_VIA[$registration->verified_via] ?? '-' }}</dd>
+            </dl>
         </div>
     </div>
 
@@ -104,20 +118,4 @@
             @endunless
         </div>
     </div>
-
-    @if (! $registration->cancelled_at && ! $registration->redeemed_at)
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Zona berbahaya</h3>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ route('admin.registrations.cancel', $registration) }}"
-                      data-confirm="Batalkan registrasi ini?"
-                      data-confirm-detail="Kuota {{ $registration->ticket_qty }} tiket akan dikembalikan. Tindakan ini tidak bisa dibatalkan.">
-                    @csrf
-                    <button type="submit" class="btn btn-danger">Batalkan registrasi</button>
-                </form>
-            </div>
-        </div>
-    @endif
 @endsection
