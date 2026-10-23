@@ -136,12 +136,6 @@
 
                     <div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
                         <a href="/" class="admin-sidebar-brand fw-bolder fs-3">Ticketify</a>
-                        <div id="kt_app_sidebar_toggle"
-                             class="app-sidebar-toggle btn btn-icon btn-shadow btn-sm btn-color-muted btn-active-color-primary body-bg h-30px w-30px position-absolute top-50 start-100 translate-middle rotate"
-                             data-kt-toggle="true" data-kt-toggle-state="active"
-                             data-kt-toggle-target="body" data-kt-toggle-name="app-sidebar-minimize">
-                            <i class="ki-duotone ki-black-left-line fs-3 rotate-180"><span class="path1"></span><span class="path2"></span></i>
-                        </div>
                     </div>
 
                     <div class="app-sidebar-menu overflow-hidden flex-column-fluid">
@@ -156,11 +150,6 @@
                                  id="kt_app_sidebar_menu" data-kt-menu="true" data-kt-menu-expand="false">
 
                                 @if (auth()->user()->isAdmin())
-                                    <div class="menu-item pt-3">
-                                        <div class="menu-content">
-                                            <span class="menu-heading fw-bold text-uppercase fs-7">Administrasi</span>
-                                        </div>
-                                    </div>
                                     <div class="menu-item">
                                         <a class="menu-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">
                                             <span class="menu-icon">
