@@ -131,7 +131,7 @@
                         <x-field label="Nomor WhatsApp" name="phone" type="tel" inputmode="numeric"
                                  placeholder="08xxxxxxxxxx" autocomplete="tel" maxlength="20"
                                  value="{{ old('phone') }}"
-                                 :helper="'Boleh diawali 08 atau 62.'.($whatsappActive ? ' E-ticket dikirim ke nomor ini.' : '')" />
+                                 helper="Boleh diawali 08 atau 62." />
 
                         <div>
                             <x-stepper name="ticket_qty" :max="$maxQty" :value="(int) old('ticket_qty', 1)"

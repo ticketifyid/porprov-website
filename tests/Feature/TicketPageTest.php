@@ -165,9 +165,9 @@ class TicketPageTest extends TestCase
         $this->post('/cari-tiket', ['contact' => 'Budi.Santoso+x@Gmail.com'])
             ->assertOk()->assertSee(self::NEUTRAL);
 
-        Queue::assertPushed(SendTicketNotification::class, 2);
+        Queue::assertPushed(SendTicketNotification::class, 1);
         $this->assertSame('pending', NotificationLog::where('registration_id', $registration->id)->where('channel', 'email')->value('status'));
-        $this->assertSame(2, NotificationLog::where('registration_id', $registration->id)->count());
+        $this->assertSame(1, NotificationLog::where('registration_id', $registration->id)->count());
     }
 
     public function test_respons_identik_untuk_terdaftar_dan_tidak_terdaftar(): void
@@ -182,7 +182,7 @@ class TicketPageTest extends TestCase
 
         $terdaftar->assertOk()->assertSee(self::NEUTRAL);
         $this->assertSame($strip($terdaftar->getContent()), $strip($tidak->getContent()));
-        Queue::assertPushed(SendTicketNotification::class, 2); // hanya milik yang terdaftar
+        Queue::assertPushed(SendTicketNotification::class, 1); // hanya milik yang terdaftar
     }
 
     public function test_hp_dipakai_dua_registrasi_keduanya_dikirim_ulang(): void
@@ -193,7 +193,7 @@ class TicketPageTest extends TestCase
 
         $this->post('/cari-tiket', ['contact' => '+62 812-3456-7890'])->assertSee(self::NEUTRAL);
 
-        Queue::assertPushed(SendTicketNotification::class, 4);
+        Queue::assertPushed(SendTicketNotification::class, 2);
     }
 
     public function test_permintaan_ke_4_untuk_kontak_sama_tidak_dispatch_tetapi_respons_identik(): void
@@ -212,7 +212,7 @@ class TicketPageTest extends TestCase
             $r->assertOk()->assertSee(self::NEUTRAL);
         }
         $this->assertSame($strip($responses[0]->getContent()), $strip($responses[3]->getContent()));
-        Queue::assertPushed(SendTicketNotification::class, 6); // 3 permintaan x 2 kanal
+        Queue::assertPushed(SendTicketNotification::class, 3); // 3 permintaan x 1 kanal
     }
 
     public function test_kontak_berbeda_dari_ip_sama_tidak_ikut_terblokir(): void
@@ -224,11 +224,11 @@ class TicketPageTest extends TestCase
         foreach (range(1, 4) as $i) {
             $this->post('/cari-tiket', ['contact' => 'budisantoso@gmail.com'])->assertOk();
         }
-        Queue::assertPushed(SendTicketNotification::class, 6);
+        Queue::assertPushed(SendTicketNotification::class, 3);
 
         $this->post('/cari-tiket', ['contact' => 'lain@gmail.com'])->assertOk()->assertSee(self::NEUTRAL);
 
-        Queue::assertPushed(SendTicketNotification::class, 8);
+        Queue::assertPushed(SendTicketNotification::class, 4);
     }
 
     public function test_registrasi_yang_dibatalkan_diperlakukan_seolah_tidak_terdaftar(): void
@@ -272,10 +272,10 @@ class TicketPageTest extends TestCase
             $this->post('/cari-tiket', ['contact' => 'budisantoso@gmail.com'])->assertOk()->assertSee(self::NEUTRAL);
         }
 
-        Queue::assertPushed(SendTicketNotification::class, 6); // tetap 3 permintaan x 2 kanal
+        Queue::assertPushed(SendTicketNotification::class, 3); // tetap 3 permintaan x 1 kanal
 
         $this->travel(61)->minutes();
         $this->post('/cari-tiket', ['contact' => 'budisantoso@gmail.com'])->assertOk();
-        Queue::assertPushed(SendTicketNotification::class, 8);
+        Queue::assertPushed(SendTicketNotification::class, 4);
     }
 }

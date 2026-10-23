@@ -120,8 +120,7 @@ class NotificationChannelTextTest extends TestCase
         $this->get('/')->assertSeeText('Link e-ticket berisi QR dikirim ke email dan WhatsApp Anda.');
         $this->get('/daftar')
             ->assertSeeText('E-ticket berisi QR dikirim ke email dan WhatsApp Anda.')
-            ->assertSeeText('E-ticket dikirim ke email dan WhatsApp di bawah.')
-            ->assertSeeText('E-ticket dikirim ke nomor ini.');
+            ->assertSeeText('E-ticket dikirim ke email dan WhatsApp di bawah.');
         $this->get('/daftar/sukses/'.$this->registration->token)
             ->assertSeeText('E-ticket sudah dikirim ke email dan WhatsApp Anda.');
         $this->get('/cari-tiket')->assertSeeText('Link e-ticket akan dikirim ulang ke kontak tersebut.');

@@ -17,7 +17,7 @@ class ResendTicketNotifications
     /**
      * @var list<string>
      */
-    private const CHANNELS = ['email', 'whatsapp'];
+    private const CHANNELS = ['email'];
 
     public function handle(Registration $registration): void
     {

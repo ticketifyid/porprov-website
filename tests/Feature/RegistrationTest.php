@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Actions\CancelRegistration;
 use App\Actions\RegisterAttendee;
 use App\Jobs\SendTicketNotification;
 use App\Models\Event;
 use App\Models\Regency;
 use App\Models\Registration;
+use App\Models\User;
 use App\Services\ImageCaptcha;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -653,17 +655,23 @@ class RegistrationTest extends TestCase
         $this->assertSame('6281234567890', $registration->phone);
 
         $logs = $registration->notificationLogs()->orderBy('channel')->get();
-        $this->assertSame(['email', 'whatsapp'], $logs->pluck('channel')->all());
-        $this->assertSame(['pending', 'pending'], $logs->pluck('status')->all());
+        $this->assertSame(['email'], $logs->pluck('channel')->all());
+        $this->assertSame(['pending'], $logs->pluck('status')->all());
 
-        Queue::assertPushed(SendTicketNotification::class, 2);
-        foreach (['email', 'whatsapp'] as $channel) {
-            Queue::assertPushed(
-                SendTicketNotification::class,
-                fn (SendTicketNotification $job) => $job->registrationId === $registration->id
-                    && $job->channel === $channel,
-            );
-        }
+        Queue::assertPushed(SendTicketNotification::class, 1);
+        Queue::assertPushed(
+            SendTicketNotification::class,
+            fn (SendTicketNotification $job) => $job->registrationId === $registration->id
+                && $job->channel === 'email',
+        );
+    }
+
+    public function test_form_tidak_menjanjikan_pengiriman_lewat_whatsapp(): void
+    {
+        $this->get('/daftar')
+            ->assertOk()
+            ->assertSeeText('Boleh diawali 08 atau 62.')
+            ->assertDontSeeText('E-ticket dikirim ke nomor ini');
     }
 
     public function test_halaman_sukses_menampilkan_kode_dan_jumlah_tiket(): void
@@ -708,7 +716,7 @@ class RegistrationTest extends TestCase
         $this->post('/daftar', $this->payload())->assertRedirectContains('/daftar/sukses/');
 
         $pertama = Registration::firstOrFail();
-        app(\App\Actions\CancelRegistration::class)->handle($pertama, \App\Models\User::factory()->admin()->create());
+        app(CancelRegistration::class)->handle($pertama, User::factory()->admin()->create());
 
         $response = $this->post('/daftar', $this->payload(['name' => 'Budi Santoso Lagi']));
 

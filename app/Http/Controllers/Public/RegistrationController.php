@@ -23,7 +23,7 @@ class RegistrationController extends Controller
      *
      * @var list<string>
      */
-    private const CHANNELS = ['email', 'whatsapp'];
+    private const CHANNELS = ['email'];
 
     /**
      * Kode error MySQL yang berarti server sedang sibuk, bukan data salah:

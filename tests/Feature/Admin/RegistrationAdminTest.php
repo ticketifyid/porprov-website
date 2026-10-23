@@ -123,6 +123,28 @@ class RegistrationAdminTest extends TestCase
             ->assertDontSeeText('whatsapp');
     }
 
+    public function test_registrasi_dengan_log_whatsapp_lama_aman_di_admin_dan_kirim_ulang_hanya_email(): void
+    {
+        Queue::fake();
+        $registration = $this->makeRegistration();
+        NotificationLog::create(['registration_id' => $registration->id, 'channel' => 'email', 'status' => 'sent', 'attempts' => 1, 'sent_at' => now()]);
+        NotificationLog::create(['registration_id' => $registration->id, 'channel' => 'whatsapp', 'status' => 'sent', 'attempts' => 1, 'sent_at' => now()]);
+
+        $this->actingAs($this->admin)->get('/admin/registrations')->assertOk()->assertSee($registration->code);
+        $this->actingAs($this->admin)->get('/admin/registrations/'.$registration->id)->assertOk();
+        $this->actingAs($this->admin)->get('/admin')->assertOk();
+        $this->actingAs($this->admin)->get('/admin/dashboard-data')->assertOk();
+
+        $this->actingAs($this->admin)
+            ->post('/admin/registrations/'.$registration->id.'/resend')
+            ->assertRedirect();
+
+        Queue::assertPushed(SendTicketNotification::class, 1);
+        Queue::assertPushed(SendTicketNotification::class, fn (SendTicketNotification $job) => $job->channel === 'email');
+        $this->assertSame('pending', NotificationLog::where('registration_id', $registration->id)->where('channel', 'email')->value('status'));
+        $this->assertSame('sent', NotificationLog::where('registration_id', $registration->id)->where('channel', 'whatsapp')->value('status'));
+    }
+
     public function test_daftar_peserta_menampilkan_dan_menyaring_jalur_verifikasi(): void
     {
         $turnstile = $this->makeRegistration(['name' => 'Peserta Turnstile', 'verified_via' => 'turnstile']);
@@ -239,11 +261,11 @@ class RegistrationAdminTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionHas('status');
 
-        Queue::assertPushed(SendTicketNotification::class, 2);
+        Queue::assertPushed(SendTicketNotification::class, 1);
         $this->assertSame(
             'pending',
             NotificationLog::where('registration_id', $registration->id)->where('channel', 'email')->value('status'),
         );
-        $this->assertSame(2, NotificationLog::where('registration_id', $registration->id)->count());
+        $this->assertSame(1, NotificationLog::where('registration_id', $registration->id)->count());
     }
 }
