@@ -59,7 +59,7 @@
                         <tr>
                             <th>Kanal</th>
                             <th>Status</th>
-                            <th>Percobaan</th>
+                            <th>Gagal</th>
                             <th>Terkirim pada</th>
                             <th>Error terakhir</th>
                         </tr>
@@ -75,7 +75,7 @@
                                 };
                             @endphp
                             <tr>
-                                <td>{{ $log->channel }}</td>
+                                <td>{{ ucfirst($log->channel) }}</td>
                                 <td><span class="badge {{ $statusBadge[0] }}">{{ $statusBadge[1] }}</span></td>
                                 <td>{{ $log->attempts }}</td>
                                 <td>{{ $log->sent_at?->locale('id')->translatedFormat('j F Y, H.i') ?? '-' }}</td>
