@@ -21,24 +21,36 @@
     @endif
 
     <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Daftar peserta</h3>
-            <form method="GET" class="card-toolbar w-100 w-md-auto d-flex flex-wrap gap-2 mt-3 mt-md-0">
-                @if ($notif !== '')
-                    <input type="hidden" name="notif" value="{{ $notif }}">
-                @endif
-                <input type="text" name="q" class="form-control form-control-sm flex-grow-1" style="min-width: 160px;"
-                       placeholder="Cari nama, kode, atau nomor HP" value="{{ $keyword }}">
-                <select name="via" class="form-select form-select-sm w-auto" aria-label="Jalur verifikasi">
-                    <option value="">Semua verifikasi</option>
-                    @foreach (\App\Models\Registration::VERIFIED_VIA as $value => $label)
-                        <option value="{{ $value }}" @selected($via === $value)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <button type="submit" class="btn btn-sm btn-primary">Cari</button>
-            </form>
-        </div>
-        <div class="card-body">
+        {{-- Pola daftar Metronic: pencarian di kiri header kartu, filter dan tombol di kanan. --}}
+        <form method="GET" class="card-header border-0 pt-6 gap-3">
+            @if ($notif !== '')
+                <input type="hidden" name="notif" value="{{ $notif }}">
+            @endif
+
+            <div class="card-title w-100 w-md-auto m-0">
+                <div class="d-flex align-items-center position-relative w-100">
+                    <i class="ki-duotone ki-magnifier fs-3 position-absolute ms-5"><span class="path1"></span><span class="path2"></span></i>
+                    <input type="search" name="q" class="form-control form-control-solid w-100 w-md-250px ps-13"
+                           placeholder="Cari nama, kode, atau nomor HP" aria-label="Cari peserta" value="{{ $keyword }}">
+                </div>
+            </div>
+
+            <div class="card-toolbar w-100 w-md-auto m-0">
+                <div class="d-flex flex-wrap align-items-center gap-3 w-100">
+                    <select name="via" class="form-select form-select-solid flex-grow-1 w-md-175px" aria-label="Jalur verifikasi">
+                        <option value="">Semua verifikasi</option>
+                        @foreach (\App\Models\Registration::VERIFIED_VIA as $value => $label)
+                            <option value="{{ $value }}" @selected($via === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <button type="submit" class="btn btn-primary">Cari</button>
+                    @if ($hasFilter)
+                        <a href="{{ route('admin.registrations.index') }}" class="btn btn-light">Reset</a>
+                    @endif
+                </div>
+            </div>
+        </form>
+        <div class="card-body pt-0">
             @if ($registrations->isEmpty())
                 <x-admin-empty-state
                     icon="ki-search-list"
