@@ -96,14 +96,32 @@ class ScanLogAdminTest extends TestCase
             ->assertSee('Berhasil');
     }
 
-    public function test_log_qr_tidak_dikenal_tampil_tanpa_membocorkan_isi_qr(): void
+    public function test_log_qr_tidak_dikenal_menampilkan_isi_scan_di_bawah_judul(): void
     {
-        $this->makeLog(null, ['result' => 'not_found']);
+        $this->makeLog(null, ['result' => 'not_found', 'scanned_value' => 'qr-palsu-123']);
 
         $this->actingAs($this->admin)->get('/admin/scan-logs')
             ->assertOk()
-            ->assertSee('QR tidak dikenal')
-            ->assertDontSee('nilai-mentah-qr-rahasia');
+            ->assertSeeInOrder(['QR tidak dikenal', 'qr-palsu-123']);
+    }
+
+    public function test_isi_scan_panjang_dipotong_dan_di_escape(): void
+    {
+        $this->makeLog(null, ['result' => 'not_found', 'scanned_value' => '<b>'.str_repeat('z', 100)]);
+
+        $this->actingAs($this->admin)->get('/admin/scan-logs')
+            ->assertDontSee('<b>', false)
+            ->assertDontSee(str_repeat('z', 100));
+    }
+
+    public function test_isi_qr_tiket_valid_tidak_ditampilkan(): void
+    {
+        $registration = $this->makeRegistration('Budi Santoso', 'PJT26-AAAAAA');
+        $this->makeLog($registration, ['scanned_value' => 'token-tiket-valid-rahasia']);
+
+        $this->actingAs($this->admin)->get('/admin/scan-logs')
+            ->assertSee('Budi Santoso')
+            ->assertDontSee('token-tiket-valid-rahasia');
     }
 
     public function test_log_diurutkan_dari_yang_terbaru(): void

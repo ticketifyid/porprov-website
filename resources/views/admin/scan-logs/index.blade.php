@@ -85,7 +85,8 @@
                                             <div class="fw-bold">{{ $log->registration->name }}</div>
                                             <div class="text-muted fs-7">{{ $log->registration->code }} &middot; {{ $log->registration->ticket_qty }} tiket</div>
                                         @else
-                                            <span class="text-muted">QR tidak dikenal</span>
+                                            <div class="fw-bold">QR tidak dikenal</div>
+                                            <div class="text-muted fs-7 text-break">{{ \Illuminate\Support\Str::limit($log->scanned_value, 40) }}</div>
                                         @endif
                                     </td>
                                     <td>{{ $log->user?->name }}</td>
@@ -114,7 +115,8 @@
                                         <div class="fw-bold fs-6">{{ $log->registration->name }}</div>
                                         <div class="text-muted fs-7">{{ $log->registration->code }} &middot; {{ $log->registration->ticket_qty }} tiket</div>
                                     @else
-                                        <div class="fw-bold fs-6 text-muted">QR tidak dikenal</div>
+                                        <div class="fw-bold fs-6">QR tidak dikenal</div>
+                                        <div class="text-muted fs-7 text-break">{{ \Illuminate\Support\Str::limit($log->scanned_value, 40) }}</div>
                                     @endif
                                     <div class="text-muted fs-7">{{ $log->scanned_at->locale('id')->translatedFormat('j M Y, H.i.s') }}</div>
                                     <div class="text-muted fs-7">{{ $log->user?->name }} &middot; {{ $methodLabels[$log->method] ?? $log->method }}</div>
