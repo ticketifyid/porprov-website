@@ -85,6 +85,19 @@ class RegistrationAdminTest extends TestCase
             ->assertOk()->assertSee($registration->name);
     }
 
+    public function test_paginasi_daftar_peserta_memakai_markup_bootstrap_bukan_tailwind(): void
+    {
+        for ($i = 0; $i < 26; $i++) {
+            $this->makeRegistration();
+        }
+
+        $this->actingAs($this->admin)->get('/admin/registrations')
+            ->assertOk()
+            ->assertSee('class="pagination"', false)
+            ->assertSee('page-link', false)
+            ->assertDontSee('w-5 h-5', false);
+    }
+
     public function test_detail_peserta_dengan_notifikasi_pending_dan_failed_tetap_200(): void
     {
         $registration = $this->makeRegistration();

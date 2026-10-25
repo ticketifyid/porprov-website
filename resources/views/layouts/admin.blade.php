@@ -170,6 +170,14 @@
                                         </a>
                                     </div>
                                     <div class="menu-item">
+                                        <a class="menu-link {{ request()->routeIs('admin.scan-logs.*') ? 'active' : '' }}" href="{{ route('admin.scan-logs.index') }}">
+                                            <span class="menu-icon">
+                                                <i class="ki-duotone ki-time fs-2"><span class="path1"></span><span class="path2"></span></i>
+                                            </span>
+                                            <span class="menu-title">Log Penukaran</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
                                         <a class="menu-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
                                             <span class="menu-icon">
                                                 <i class="ki-duotone ki-profile-user fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span></i>

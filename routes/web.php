@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\RegistrationAdminController;
+use App\Http\Controllers\Admin\ScanLogController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Public\HomeController;
@@ -64,6 +65,8 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/registrations/{registration}', [RegistrationAdminController::class, 'show'])->name('registrations.show');
         Route::post('/registrations/{registration}/cancel', [RegistrationAdminController::class, 'cancel'])->name('registrations.cancel');
         Route::post('/registrations/{registration}/resend', [RegistrationAdminController::class, 'resend'])->name('registrations.resend');
+
+        Route::get('/scan-logs', [ScanLogController::class, 'index'])->name('scan-logs.index');
 
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');

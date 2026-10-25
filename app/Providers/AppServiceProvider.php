@@ -8,6 +8,7 @@ use App\Services\Notifications\MailTicketNotifier;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
@@ -47,6 +48,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->refuseDebugInProduction();
+
+        // View paginasi bawaan Laravel adalah Tailwind, padahal proyek tanpa
+        // Tailwind: ikon panah tampil tanpa ukuran. Admin memakai Metronic
+        // (Bootstrap 5).
+        Paginator::useBootstrapFive();
 
         // @versionedAsset('css/app.css') -> /css/app.css?v={filemtime}
         // Cache busting aset milik proyek tanpa build (lihat App\Support\AssetVersion).
